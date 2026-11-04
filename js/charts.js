@@ -7,21 +7,26 @@
 const ChartEngine = {
   charts: {},
 
+  // One colour and short label per algorithm, shared with the map's route layers
+  ALGO_COLORS: {
+    bfs: "#3b82f6",
+    dfs: "#8b5cf6",
+    ucs: "#10b981",
+    ids: "#ec4899",
+    astar: "#00f2fe",
+    gbfs: "#f59e0b",
+    astar0: "#94a3b8"
+  },
+  ALGO_SHORT: { bfs: "BFS", dfs: "DFS", ucs: "UCS", ids: "IDS", astar: "A*", gbfs: "Greedy", astar0: "A* (h=0)" },
+
   /**
    * Initializes or updates all 4 benchmark charts with comparison data
    */
   renderBenchmarkCharts(results) {
     if (!results || results.length === 0) return;
 
-    const labels = results.map(r => r.algoName.split(" ")[0]); // E.g. "BFS", "DFS", "UCS", "IDS", "A*", "Greedy"
-    const colors = [
-      "#3b82f6", // BFS
-      "#8b5cf6", // DFS
-      "#10b981", // UCS
-      "#ec4899", // IDS
-      "#00f2fe", // A*
-      "#f59e0b"  // GBFS
-    ];
+    const labels = results.map(r => this.ALGO_SHORT[r.algoKey] || r.algoName);
+    const colors = results.map(r => this.ALGO_COLORS[r.algoKey] || "#64748b");
 
     // Chart 1: Nodes Expanded Bar Chart
     this.renderNodesChart(labels, results.map(r => r.nodesExpanded), colors);
@@ -149,22 +154,26 @@ const ChartEngine = {
 
     if (this.charts.radarChart) this.charts.radarChart.destroy();
 
-    // Select top 3 benchmark contenders: UCS, A*, and BFS
+    // Select top 3 benchmark contenders: UCS, A*, and Greedy BFS
     const ucs = results.find(r => r.algoKey === "ucs") || results[2];
     const astar = results.find(r => r.algoKey === "astar") || results[4];
     const gbfs = results.find(r => r.algoKey === "gbfs") || results[5];
 
-    const maxCost = Math.max(...results.map(r => r.totalCost || 1));
-    const maxNodes = Math.max(...results.map(r => r.nodesExpanded || 1));
+    const maxCost = Math.max(1, ...results.filter(r => r.found).map(r => r.totalCost));
+    const maxNodes = Math.max(1, ...results.map(r => r.nodesExpanded));
+    const maxTime = Math.max(0.001, ...results.map(r => r.executionTimeMs));
 
-    // Score out of 100
-    const calcScore = (cost, nodes, time) => [
-      Math.max(10, Math.round((1 - cost / (maxCost * 1.2)) * 100)),
-      Math.max(10, Math.round((1 - nodes / (maxNodes * 1.2)) * 100)),
-      Math.max(20, Math.round(100 - time * 10)),
-      Math.round(85 - (cost * 2)),
-      Math.round(90)
-    ];
+    // Scores out of 100, all derived from measured results
+    const calcScore = (res) => {
+      if (!res.found) return [0, 0, 0, 0, 0];
+      return [
+        Math.max(10, Math.round((1 - res.totalCost / (maxCost * 1.2)) * 100)),
+        Math.max(10, Math.round((1 - res.nodesExpanded / (maxNodes * 1.2)) * 100)),
+        Math.max(10, Math.round((1 - res.executionTimeMs / (maxTime * 1.2)) * 100)),
+        Math.round(res.pathSafety * 100),
+        100
+      ];
+    };
 
     this.charts.radarChart = new Chart(ctx, {
       type: "radar",
@@ -173,19 +182,19 @@ const ChartEngine = {
         datasets: [
           {
             label: "A* Search",
-            data: calcScore(astar.totalCost, astar.nodesExpanded, astar.executionTimeMs),
+            data: calcScore(astar),
             borderColor: "#00f2fe",
             backgroundColor: "rgba(0, 242, 254, 0.2)"
           },
           {
             label: "UCS / Dijkstra",
-            data: calcScore(ucs.totalCost, ucs.nodesExpanded, ucs.executionTimeMs),
+            data: calcScore(ucs),
             borderColor: "#10b981",
             backgroundColor: "rgba(16, 185, 129, 0.2)"
           },
           {
             label: "Greedy BFS",
-            data: calcScore(gbfs.totalCost, gbfs.nodesExpanded, gbfs.executionTimeMs),
+            data: calcScore(gbfs),
             borderColor: "#f59e0b",
             backgroundColor: "rgba(245, 158, 11, 0.2)"
           }

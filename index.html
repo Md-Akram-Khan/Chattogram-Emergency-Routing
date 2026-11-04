@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Chattogram Port City Emergency Vehicle Dispatch & Routing Simulator</title>
-  <meta name="description" content="AI/ML Emergency Vehicle Routing & Algorithm Simulation in Chattogram Port City using BFS, DFS, UCS, IDS, A*, and Greedy Best-First Search under dynamic urban constraints.">
+  <title>Chattogram Emergency Routing Simulator</title>
+  <meta name="description" content="Emergency vehicle routing simulation on the real Chattogram OpenStreetMap road network with BFS, DFS, UCS, IDS, A*, and Greedy Best-First Search under dynamic urban constraints.">
 
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -30,7 +30,7 @@
       </div>
       <div>
         <h1 class="brand-title">Chattogram Emergency Routing Simulator</h1>
-        <p class="brand-subtitle">High-Density AI Search Algorithms under Tidal Waterlogging, Port Lorry Congestion & Hilly Corridor Constraints</p>
+        <p class="brand-subtitle">Graph Search on the Real OpenStreetMap Road Network under Tidal Waterlogging, Port Lorry Congestion & Night Safety Constraints</p>
       </div>
     </div>
 
@@ -50,9 +50,9 @@
     </div>
   </nav>
 
-  <!-- Scenario Quick Presets Bar for Chattogram -->
+  <!-- Quick trip presets -->
   <div class="presets-bar">
-    <span class="presets-label">⚡ Real Scenarios:</span>
+    <span class="presets-label">⚡ Quick Trips:</span>
     <button class="preset-chip" data-preset="monsoon-flood">🌊 Tidal Flood (Halishahar ➔ CMCH)</button>
     <button class="preset-chip" data-preset="port-fire">🔥 Port Industrial Fire (CEPZ ➔ Imperial Hosp)</button>
     <button class="preset-chip" data-preset="midnight-cardiac">🚑 Airport Emergency (Airport ➔ Evercare Hosp)</button>
@@ -62,7 +62,7 @@
 
   <!-- Main Container -->
   <div class="main-container">
-    
+
     <!-- Sidebar Control Panel -->
     <aside class="sidebar">
       <div>
@@ -73,13 +73,27 @@
 
         <div class="control-card">
           <div class="control-group">
-            <label class="control-label" for="select-start">Emergency Depot / Start 🏁</label>
-            <select id="select-start" class="select-input"></select>
+            <label class="control-label" for="search-start">Start Location 🏁</label>
+            <div class="node-search">
+              <input type="text" id="search-start" class="select-input node-search-input" placeholder="Search places, roads, junctions…"
+                     autocomplete="off" spellcheck="false" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="results-start">
+              <button type="button" class="node-search-clear" data-clear="start" title="Clear start" aria-label="Clear start">×</button>
+              <ul id="results-start" class="node-search-results" role="listbox" hidden></ul>
+            </div>
+            <div id="snap-start" class="snap-info"></div>
           </div>
 
+          <button id="btn-swap-nodes" class="swap-btn" type="button" title="Swap start and destination" aria-label="Swap start and destination">⇅</button>
+
           <div class="control-group">
-            <label class="control-label" for="select-target">Destination Hospital / Goal 🏥</label>
-            <select id="select-target" class="select-input"></select>
+            <label class="control-label" for="search-target">Destination 🎯</label>
+            <div class="node-search">
+              <input type="text" id="search-target" class="select-input node-search-input" placeholder="Search places, roads, junctions…"
+                     autocomplete="off" spellcheck="false" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="results-target">
+              <button type="button" class="node-search-clear" data-clear="target" title="Clear destination" aria-label="Clear destination">×</button>
+              <ul id="results-target" class="node-search-results" role="listbox" hidden></ul>
+            </div>
+            <div id="snap-target" class="snap-info"></div>
           </div>
 
           <div class="control-group">
@@ -91,15 +105,37 @@
               <option value="dfs">DFS (Depth-First Search)</option>
               <option value="ids">IDS (Iterative Deepening Search)</option>
               <option value="gbfs">Greedy Best-First Search</option>
-              <option value="all">⚡ COMPARE ALL 6 ALGORITHMS</option>
+              <option value="astar0">A* with zero heuristic (baseline)</option>
+              <option value="all">⚡ COMPARE ALL ALGORITHMS</option>
             </select>
           </div>
+
+          <label class="toggle-row" for="toggle-oneway">
+            <input type="checkbox" id="toggle-oneway" checked>
+            <span>Respect one-way streets</span>
+          </label>
         </div>
       </div>
 
       <div>
         <div class="section-title">
-          <span>Dynamic Real Conditions</span>
+          <span>Scenario</span>
+          <span id="scenario-badge" style="color: var(--accent-purple);"></span>
+        </div>
+
+        <div class="control-card">
+          <div class="control-group">
+            <label class="control-label" for="select-scenario">Active scenario</label>
+            <select id="select-scenario" class="select-input"></select>
+            <p id="scenario-desc" class="control-hint" style="margin: 0.5rem 0 0;"></p>
+          </div>
+          <button id="btn-open-studio" class="btn-secondary" type="button">🧪 Scenario Studio</button>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-title">
+          <span>Baseline Conditions</span>
           <span style="color: var(--accent-amber);">Real-Time</span>
         </div>
 
@@ -143,6 +179,62 @@
         </div>
       </div>
 
+      <details class="control-card collapsible">
+        <summary>Cost Weights <span id="weights-badge" class="summary-note"></span></summary>
+        <p class="control-hint">How strongly each condition raises road cost (0 = ignore, 1 = default, up to 10). A scenario with its own weights overrides these.</p>
+        <div id="weights-controls"></div>
+        <button id="btn-reset-weights" class="btn-secondary" type="button">Reset weights to 1</button>
+      </details>
+
+      <details class="control-card collapsible">
+        <summary>Search Limits</summary>
+        <p class="control-hint">A search stopped by a limit reports why; that is not proof that no route exists.</p>
+        <div class="limit-grid">
+          <label for="limit-expansions">Max expansions</label>
+          <input type="number" id="limit-expansions" class="select-input" min="1" max="50000000" step="1000">
+          <label for="limit-timeout">Timeout (ms)</label>
+          <input type="number" id="limit-timeout" class="select-input" min="10" max="60000" step="100">
+          <label for="limit-depth">Max DFS / IDS depth (0 = no limit)</label>
+          <input type="number" id="limit-depth" class="select-input" min="0" max="20000" step="10">
+          <label for="limit-snap">Snapping limit (m)</label>
+          <input type="number" id="limit-snap" class="select-input" min="10" max="2000" step="10">
+        </div>
+        <p id="limits-error" class="form-error" hidden></p>
+        <label class="toggle-row" for="toggle-astar0">
+          <input type="checkbox" id="toggle-astar0">
+          <span>Include zero-heuristic A* in comparisons</span>
+        </label>
+      </details>
+
+      <div>
+        <div class="section-title">
+          <span>Visualization</span>
+          <span id="network-info" style="color: var(--accent-cyan);"></span>
+        </div>
+
+        <div class="control-card">
+          <label class="toggle-row" for="toggle-explored">
+            <input type="checkbox" id="toggle-explored" checked>
+            <span>Animate explored nodes (search frontier)</span>
+          </label>
+          <label class="toggle-row" for="toggle-places">
+            <input type="checkbox" id="toggle-places">
+            <span>Show named places (zoom 15+)</span>
+          </label>
+          <details class="filter-group">
+            <summary>Place categories</summary>
+            <div id="place-filters" class="filter-list"></div>
+          </details>
+          <details class="filter-group">
+            <summary>Road classes on the map</summary>
+            <div id="road-filters" class="filter-list"></div>
+          </details>
+          <p class="control-hint">Click anywhere on the map to set a start or destination at the nearest road node. Click a road to inspect or edit it.</p>
+          <button id="btn-clear-blocks" class="btn-secondary" type="button">🔓 Clear Quick Road Blocks</button>
+          <button id="btn-reset-overrides" class="btn-secondary" type="button" style="margin-top: 0.5rem;">♻️ Reset All Road Overrides</button>
+        </div>
+      </div>
+
       <!-- Action Buttons -->
       <div style="display: flex; flex-direction: column; gap: 0.6rem; margin-top: auto;">
         <button id="btn-run-sim" class="btn-primary">
@@ -161,6 +253,7 @@
 
       <!-- TAB 1: MAP & SIMULATOR -->
       <div id="tab-map" class="tab-pane active">
+       <div class="map-layout">
         <div id="map-container">
           <!-- Leaflet Map Canvas -->
           <div id="map"></div>
@@ -183,7 +276,18 @@
               <span class="stat-title">Expanded Nodes</span>
               <span id="stat-nodes" class="stat-value">--</span>
             </div>
+            <div id="stat-status" class="stat-status"></div>
           </div>
+
+          <!-- Compare mode: one entry per algorithm route -->
+          <div id="routes-panel" class="routes-panel" hidden>
+            <div class="routes-panel-title">Routes</div>
+            <div id="routes-list"></div>
+          </div>
+
+          <div id="viewport-notice" class="viewport-notice" hidden></div>
+
+          <button id="btn-show-trace" class="map-chip" type="button" hidden>☰ Exploration trace</button>
 
           <!-- Map Color Legend Overlay -->
           <div class="map-legend-overlay">
@@ -191,20 +295,77 @@
             <div class="legend-item"><div class="legend-dot" style="background: #10b981;"></div> Clear / Low Cost Road</div>
             <div class="legend-item"><div class="legend-dot" style="background: #f59e0b;"></div> Moderate Traffic / Flood</div>
             <div class="legend-item"><div class="legend-dot" style="background: #ef4444;"></div> High Congestion / Submerged</div>
-            <div class="legend-item"><div class="legend-dot" style="background: #a855f7;"></div> Blocked / Impassable</div>
-            <div class="legend-item"><div class="legend-dot" style="background: #00f2fe; box-shadow: 0 0 6px #00f2fe;"></div> Computed Path</div>
+            <div class="legend-item"><div class="legend-dot" style="background: #a855f7;"></div> Closed (dashed: one direction)</div>
+            <div class="legend-item"><div class="legend-dot" style="background: #facc15; border: 2px solid #111827; box-shadow: 0 0 6px #facc15;"></div> Searched Path (route found)</div>
+            <div class="legend-item"><div class="legend-dot" style="background: #f8fafc; border: 1.5px solid #0f172a;"></div> Explored by Search</div>
+            <div class="legend-item"><div class="legend-dot" style="background: #e11d9b; border: 1.5px solid #fff;"></div> Trace Step (magenta line: its path)</div>
+          </div>
+
+          <!-- Shown instead of the map when the dataset files are missing -->
+          <div id="setup-panel" class="setup-panel" hidden>
+            <h2>Road dataset not loaded</h2>
+            <p id="setup-detail"></p>
+            <p>Build the dataset from OpenStreetMap (Node 18+), then reload this page:</p>
+            <pre>node tools/build_graph.js</pre>
+            <p>Check that the Overpass servers are reachable first with:</p>
+            <pre>node tools/build_graph.js --diagnose</pre>
+            <p>If a previous download was interrupted, publish what is already cached without network access:</p>
+            <pre>node tools/build_graph.js --offline</pre>
+            <button id="btn-check-dataset" class="btn-primary" type="button">Check dataset status</button>
           </div>
         </div>
+
+        <!-- Expanded nodes in search order, with step-by-step replay -->
+        <aside id="trace-panel" class="trace-panel" aria-label="Exploration trace">
+          <div class="trace-header">
+            <div>
+              <div class="trace-title">Exploration Trace</div>
+              <div id="trace-summary" class="trace-summary">Run a search to see the nodes it expands.</div>
+            </div>
+            <button id="btn-hide-trace" class="icon-btn" type="button" title="Hide the trace panel" aria-label="Hide the trace panel">×</button>
+          </div>
+
+          <div class="trace-controls">
+            <button type="button" class="trace-btn" data-trace="first" title="First step" aria-label="First step">⏮</button>
+            <button type="button" class="trace-btn" data-trace="prev" title="Previous step (←)" aria-label="Previous step">◀</button>
+            <button type="button" class="trace-btn trace-play" data-trace="play" title="Play / pause (space)" aria-label="Play or pause">▶</button>
+            <button type="button" class="trace-btn" data-trace="next" title="Next step (→)" aria-label="Next step">▶|</button>
+            <button type="button" class="trace-btn" data-trace="last" title="Last step" aria-label="Last step">⏭</button>
+            <select id="trace-speed" class="select-input trace-speed" title="Playback speed" aria-label="Playback speed">
+              <option value="2">2 / s</option>
+              <option value="5" selected>5 / s</option>
+              <option value="20">20 / s</option>
+              <option value="100">100 / s</option>
+              <option value="1000">1000 / s</option>
+            </select>
+          </div>
+
+          <div class="trace-jump">
+            <label for="trace-jump-input">Go to step</label>
+            <input id="trace-jump-input" type="number" class="select-input" min="1" step="1">
+            <label class="toggle-row trace-follow" for="trace-follow">
+              <input type="checkbox" id="trace-follow" checked>
+              <span>Follow on map</span>
+            </label>
+          </div>
+
+          <div id="trace-detail" class="trace-detail"></div>
+
+          <div id="trace-list" class="trace-list" tabindex="0" role="listbox" aria-label="Expanded nodes in search order">
+            <div id="trace-spacer" class="trace-spacer"></div>
+          </div>
+        </aside>
+       </div>
       </div>
 
       <!-- TAB 2: BENCHMARK & CHARTS -->
       <div id="tab-benchmark" class="tab-pane">
         <div class="benchmark-container">
-          
-          <div style="display: flex; justify-content: space-between; align-items: center;">
+
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap;">
             <div>
               <h2 style="font-size: 1.3rem; font-weight: 700; color: var(--text-primary);">Algorithm Performance Benchmark (Chattogram Metro)</h2>
-              <p style="font-size: 0.85rem; color: var(--text-secondary);">Comparative evaluation of 6 AI search algorithms across 45 high-density nodes in Chattogram.</p>
+              <p style="font-size: 0.85rem; color: var(--text-secondary);">All algorithms run on the same graph, endpoints, scenario and saved overrides.</p>
             </div>
             <button id="btn-export-csv" class="btn-secondary" style="width: auto;">
               📥 Export Benchmark CSV
@@ -264,7 +425,9 @@
                     <th>Dynamic Cost</th>
                     <th>Distance (km)</th>
                     <th>Est. Time (mins)</th>
+                    <th>Route Nodes</th>
                     <th>Nodes Expanded</th>
+                    <th>Nodes Generated</th>
                     <th>Max Queue Size</th>
                     <th>Execution Time (ms)</th>
                   </tr>
@@ -276,32 +439,77 @@
             </div>
           </div>
 
+          <!-- Scenario Comparison -->
+          <div class="table-card">
+            <div class="chart-header">
+              <span class="chart-title">Scenario Comparison (up to 8 scenarios, same start and destination)</span>
+            </div>
+            <div class="compare-controls">
+              <div id="compare-scenario-list" class="filter-list compare-list"></div>
+              <div class="compare-actions">
+                <label class="control-label" for="compare-algo">Algorithm</label>
+                <select id="compare-algo" class="select-input"></select>
+                <button id="btn-compare-scenarios" class="btn-primary" type="button">Run Scenario Comparison</button>
+                <p id="compare-error" class="form-error" hidden></p>
+              </div>
+            </div>
+            <div id="compare-stale" class="stale-banner" hidden>These results were computed for earlier inputs. Run the comparison again to refresh them.</div>
+            <div class="table-responsive">
+              <table class="custom-table">
+                <thead>
+                  <tr>
+                    <th>Scenario</th>
+                    <th>Status</th>
+                    <th>Dynamic Cost</th>
+                    <th>Distance (km)</th>
+                    <th>Est. Time (mins)</th>
+                    <th>Route Nodes</th>
+                    <th>Nodes Expanded</th>
+                    <th>Execution Time (ms)</th>
+                  </tr>
+                </thead>
+                <tbody id="compare-body"></tbody>
+              </table>
+            </div>
+          </div>
+
         </div>
       </div>
 
       <!-- TAB 3: FORMULAS & DYNAMIC MODEL -->
       <div id="tab-analysis" class="tab-pane">
         <div class="analysis-container">
-          
+
           <article class="analysis-article">
             <h2>Real-World Dynamic Cost & Heuristic Model for Chattogram Metro</h2>
             <p>
-              Chattogram's extended network of 45 high-density nodes incorporates key hospitals (CMCH, Evercare, Imperial, Max, General Hospital, BITID), port gates (Port Gate 1, Custom House, Saltgola, CEPZ), flyovers, coastal embankments in Halishahar, and northern highway bypasses.
+              Every node can be chosen as a start or destination from the search boxes, from a named place, or by clicking the map. The road network is built from <strong>OpenStreetMap</strong> data for the Chattogram metropolitan area, from motorways down to residential streets and public service lanes (old-city galis, market and campus lanes), including Kalurghat and the south bank: every junction keeps its true OSM position, pass-through points are folded into curved road segments that follow the real road line, and one-way directions are kept. The graph is the largest <strong>strongly connected</strong> part of the network, so every node can reach every other node without driving against a one-way street. The 47 curated landmarks (port gates, CEPZ, depots, circles, flyovers, hospitals and other well-known places) are snapped onto the road they lie on. Flood susceptibility and night safety for each OSM road are interpolated from the hand-calibrated seed corridors.
             </p>
 
             <h3>1. Dynamic Edge Cost Function C(u, v)</h3>
-            <p>The dynamic traversal cost for an emergency vehicle along road segment \((u, v)\) is formulated as:</p>
-            
-            <div class="formula-box">
-              C(u, v) = Distance(u, v) &times; w_road &times; PortLorryTraffic &times; TidalFloodFactor &times; SafetyFactor + JunctionDelay
-            </div>
-
-            <h3>2. Admissible Heuristic Function H(n)</h3>
-            <p>For informed search algorithms (**A* Search** and **Greedy BFS**), the heuristic estimate \(H(n)\) uses straight-line Haversine distance scaled to maintain admissibility:</p>
+            <p>The dynamic traversal cost for an emergency vehicle along road segment (u, v) is formulated as:</p>
 
             <div class="formula-box">
-              H(n, Goal) = HaversineDistance(n.lat, n.lng, Goal.lat, Goal.lng) &times; 0.8
+              C(u, v) = Distance &times; w_road &times; (1 + W<sub>t</sub>&middot;Traffic) &times; (1 + W<sub>r</sub>&middot;Water) &times; (1 + W<sub>c</sub>&middot;Condition) &times; (1 + W<sub>s</sub>&middot;SafetyPenalty) + JunctionDelay
             </div>
+            <p>W<sub>t</sub>, W<sub>r</sub>, W<sub>c</sub>, W<sub>s</sub> are the adjustable cost weights (default 1). Closed directions, and the wrong way along one-way streets, are excluded from the graph instead of being given a finite penalty.</p>
+
+            <h3>2. Condition Precedence</h3>
+            <p>Conditions for each road are resolved in this order, later entries replacing earlier ones: (1) the baseline sliders; (2) the active scenario's conditions for the road's OSM class; (3) the active scenario's conditions for that specific road; (4) the saved user override for that road. A saved override can therefore reopen a road that a scenario closes. Switching back to Normal Day does not remove saved overrides; use "Reset All Road Overrides" for that.</p>
+
+            <h3>3. Admissible Heuristic Function H(n)</h3>
+            <p>For informed search algorithms (<strong>A* Search</strong> and <strong>Greedy BFS</strong>), the heuristic scales straight-line Haversine distance by the cheapest cost per straight-line km of any passable road direction under the current conditions:</p>
+
+            <div class="formula-box">
+              H(n, Goal) = HaversineDistance(n, Goal) &times; min<sub>(u,v)</sub> [ C(u, v) / HaversineDistance(u, v) ]
+            </div>
+            <p>Because every road costs at least that much per km of straight-line progress, H never overestimates (admissible) and never drops by more than an edge's cost (consistent), so A* returns the same optimal route as UCS. The "A* with zero heuristic" baseline runs the same engine with H = 0, which shows how much work the heuristic saves.</p>
+
+            <h3>4. Search Limits and Result Status</h3>
+            <p>Each search stops at the configured maximum expansions, timeout, or (for DFS and IDS) maximum depth, and reports <code>expansion_limit</code>, <code>timeout</code> or <code>depth_limit</code>. Only <code>unreachable</code>, reported after a search has explored everything it can reach, means that no route exists.</p>
+
+            <h3>5. Estimated Travel Time</h3>
+            <p>Drive time uses free-flow speeds per road type (arterial 50, avenue 40, street 28, alley 15, broken 12 km/h), slowed by the same traffic, waterlogging and road-condition multipliers, plus junction waits. Night safety changes which route is preferred, not how fast the vehicle drives. All traffic, weather, condition and safety values are simulations; no live data feed is connected.</p>
           </article>
 
         </div>
@@ -310,16 +518,72 @@
     </main>
   </div>
 
+  <!-- Scenario Studio -->
+  <dialog id="studio-dialog" class="studio-dialog">
+    <div class="studio-header">
+      <h2>Scenario Studio</h2>
+      <button id="btn-close-studio" class="icon-btn" type="button" aria-label="Close">×</button>
+    </div>
+    <div class="studio-body">
+      <div class="studio-list-pane">
+        <div id="studio-list" class="studio-list"></div>
+        <div class="studio-list-actions">
+          <button id="btn-studio-new" class="btn-secondary" type="button">＋ New</button>
+          <button id="btn-studio-duplicate" class="btn-secondary" type="button">⧉ Duplicate</button>
+          <button id="btn-studio-delete" class="btn-secondary" type="button">🗑 Delete</button>
+        </div>
+      </div>
+      <form id="studio-form" class="studio-form" autocomplete="off">
+        <p id="studio-readonly" class="control-hint" hidden>Built-in scenarios are read-only. Duplicate this one to edit a copy.</p>
+        <label class="control-label" for="studio-name">Name</label>
+        <input id="studio-name" class="select-input" maxlength="80" required>
+        <label class="control-label" for="studio-desc">Description</label>
+        <textarea id="studio-desc" class="select-input" rows="2" maxlength="500"></textarea>
+
+        <label class="toggle-row" for="studio-use-weights">
+          <input type="checkbox" id="studio-use-weights">
+          <span>Use scenario-specific cost weights</span>
+        </label>
+        <div id="studio-weights" class="limit-grid"></div>
+
+        <div class="control-label">Conditions by OSM road class</div>
+        <div class="table-responsive">
+          <table class="custom-table studio-table">
+            <thead><tr><th>Road class</th><th>Traffic</th><th>Waterlogging</th><th>Condition</th><th>Safety penalty</th><th>Closed</th></tr></thead>
+            <tbody id="studio-classes"></tbody>
+          </table>
+        </div>
+
+        <div class="control-label">Conditions for specific roads</div>
+        <p class="control-hint">Add a road from its map popup with "Add to scenario". Road-specific conditions replace the class conditions for that road.</p>
+        <div id="studio-edges" class="studio-edges"></div>
+
+        <p id="studio-error" class="form-error" hidden></p>
+        <div class="studio-form-actions">
+          <button id="btn-studio-activate" class="btn-secondary" type="button">Make active</button>
+          <button id="btn-studio-save" class="btn-primary" type="submit">Save scenario</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
   <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-  
+
   <!-- Chart.js CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <!-- Datasets (generated by tools/build_graph.js) -->
+  <script src="js/chattogram_graph.js"></script>
+  <script src="js/chattogram_places.js"></script>
 
   <!-- Application Modules -->
-  <script src="js/chattogram_graph.js"></script>
+  <script src="js/spatial_index.js"></script>
   <script src="js/dynamic_cost.js"></script>
+  <script src="js/scenarios.js"></script>
   <script src="js/algorithms.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/trace_player.js"></script>
   <script src="js/charts.js"></script>
   <script src="js/app.js"></script>
 </body>

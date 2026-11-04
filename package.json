@@ -1,0 +1,19 @@
+{
+  "name": "chattogram-emergency-routing",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Emergency vehicle routing simulator on the real Chattogram OpenStreetMap road network (BFS, DFS, UCS, IDS, A*, Greedy Best-First Search).",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "build:data": "node tools/build_graph.js",
+    "build:data:offline": "node tools/build_graph.js --offline",
+    "diagnose": "node tools/build_graph.js --diagnose",
+    "test": "node --test tests/engine.test.js tests/data.test.js tests/api.test.js",
+    "test:e2e": "node --test --test-concurrency=1 tests/e2e/browser.test.js",
+    "test:all": "node --test --test-concurrency=1 tests/engine.test.js tests/data.test.js tests/api.test.js tests/e2e/browser.test.js"
+  }
+}

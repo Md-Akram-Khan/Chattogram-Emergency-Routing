@@ -4,3 +4,12 @@ Thumbs.db
 *.log
 .vscode/
 .idea/
+
+# OSM download cache (rebuilt by tools/build_graph.js)
+tools/.cache/
+
+# Previous generated datasets (made by tools/build_graph.js before overwriting)
+tools/.backups/
+
+# Saved API server state (overrides, custom scenarios)
+.state/

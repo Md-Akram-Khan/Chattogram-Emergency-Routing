@@ -4,6 +4,8 @@
    ports, flyovers, bypasses, narrow galis, and coastal corridors across Chattogram.
    ========================================================================== */
 
+// Positions of the hospitals, fire stations, 2 No Gate, Dewanhat and Saltgola
+// were verified against the same named features in OpenStreetMap.
 const CHATTOGRAM_GRAPH = {
   nodes: {
     // ------------------- HOSPITALS & MEDICAL HUBS -------------------
@@ -11,56 +13,56 @@ const CHATTOGRAM_GRAPH = {
       id: "cmch",
       name: "CMCH (Chattogram Med. College)",
       type: "hospital",
-      lat: 22.3588,
-      lng: 91.8210,
+      lat: 22.35933,
+      lng: 91.83066,
       description: "Apex Primary Emergency & Trauma Hospital in Chattogram"
     },
     "evercare_hosp": {
       id: "evercare_hosp",
       name: "Evercare Hospital Chattogram",
       type: "hospital",
-      lat: 22.3780,
-      lng: 91.8190,
+      lat: 22.40197,
+      lng: 91.8497,
       description: "Tertiary Speciality Hospital, Anannya Residential"
     },
     "imperial_hosp": {
       id: "imperial_hosp",
       name: "Imperial Hospital Ltd",
       type: "hospital",
-      lat: 22.3635,
-      lng: 91.7890,
+      lat: 22.35918,
+      lng: 91.79531,
       description: "Advanced Multi-Specialty Hospital, Pahartali"
     },
     "max_hosp": {
       id: "max_hosp",
       name: "Max Hospital & Diagnostic",
       type: "hospital",
-      lat: 22.3525,
-      lng: 91.8275,
+      lat: 22.35514,
+      lng: 91.82534,
       description: "Mehdibag Emergency Hospital Center"
     },
     "parkview_hosp": {
       id: "parkview_hosp",
       name: "Parkview Hospital",
       type: "hospital",
-      lat: 22.3610,
-      lng: 91.8235,
+      lat: 22.36329,
+      lng: 91.83576,
       description: "Panchlaish Catalganj Emergency Care"
     },
     "metro_hosp": {
       id: "metro_hosp",
       name: "Metropolitan Hospital",
       type: "hospital",
-      lat: 22.3595,
-      lng: 91.8250,
+      lat: 22.35894,
+      lng: 91.82346,
       description: "OR Nizam Road Medical Center"
     },
     "ctg_general_hosp": {
       id: "ctg_general_hosp",
       name: "Chattogram General Hospital",
       type: "hospital",
-      lat: 22.3395,
-      lng: 91.8365,
+      lat: 22.3412,
+      lng: 91.83813,
       description: "Historic General Govt Hospital, Andarkilla"
     },
     "bitid_faujdarhat": {
@@ -75,8 +77,8 @@ const CHATTOGRAM_GRAPH = {
       id: "ustc_hospital",
       name: "USTC Medical College Hospital",
       type: "hospital",
-      lat: 22.3650,
-      lng: 91.7995,
+      lat: 22.36172,
+      lng: 91.79818,
       description: "Foy's Lake USTC Campus Hospital"
     },
 
@@ -85,8 +87,8 @@ const CHATTOGRAM_GRAPH = {
       id: "epz_circle",
       name: "CEPZ Emergency Fire Depot",
       type: "depot",
-      lat: 22.2850,
-      lng: 91.7910,
+      lat: 22.29289,
+      lng: 91.78114,
       description: "Chattogram EPZ Industrial Fire Station"
     },
     "patenga_depot": {
@@ -149,8 +151,8 @@ const CHATTOGRAM_GRAPH = {
       id: "agra_fire_stn",
       name: "Agrabad Fire Service HQ",
       type: "depot",
-      lat: 22.3300,
-      lng: 91.8120,
+      lat: 22.33529,
+      lng: 91.8132,
       description: "Divisional Headquarters Fire Station Agrabad"
     },
 
@@ -167,8 +169,8 @@ const CHATTOGRAM_GRAPH = {
       id: "2no_gate",
       name: "Sholashahar 2 No. Gate",
       type: "intersection",
-      lat: 22.3660,
-      lng: 91.8240,
+      lat: 22.36622,
+      lng: 91.82313,
       description: "Akhtar Uz Zaman Flyover Hub, High Tidal Flood Risk"
     },
     "muradpur": {
@@ -255,8 +257,8 @@ const CHATTOGRAM_GRAPH = {
       id: "dewanhat",
       name: "Dewanhat Overbridge",
       type: "intersection",
-      lat: 22.3385,
-      lng: 91.8140,
+      lat: 22.3404,
+      lng: 91.81473,
       description: "Agrabad & Port Access Overbridge"
     },
     "agrabad_ca": {
@@ -287,8 +289,8 @@ const CHATTOGRAM_GRAPH = {
       id: "saltgola",
       name: "Saltgola Crossing",
       type: "intersection",
-      lat: 22.3020,
-      lng: 91.7960,
+      lat: 22.30295,
+      lng: 91.79191,
       description: "Heavy Freight Trailer Bottleneck"
     },
     "halishahar_block_a": {
