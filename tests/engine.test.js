@@ -1,16 +1,12 @@
-/* Engine tests on small synthetic graphs with known answers. */
-
 const { describe, it } = require("node:test");
 const assert = require("node:assert/strict");
 const { loadModules, makeGraph, neutralEnv } = require("./helpers/load");
 
 const ctx = loadModules();
 const { GraphSearchSuite: S, DynamicCostSystem: D, ScenarioSystem, PriorityQueue, SpatialIndex } = ctx;
-// Values from the VM context have their own Array/Object prototypes: compare plain copies
 const plain = x => JSON.parse(JSON.stringify(x));
 const ALL = ["bfs", "dfs", "ucs", "ids", "astar", "gbfs", "astar0"];
 
-// Diamond: A-B-D is 2 hops but long; A-C-E-D is 3 hops but short
 const diamond = () => makeGraph(
   { A: [22.30, 91.80], B: [22.31, 91.81], C: [22.30, 91.81], E: [22.30, 91.82], D: [22.30, 91.83] },
   [["A", "B", 9], ["B", "D", 9], ["A", "C", 1.1], ["C", "E", 1.1], ["E", "D", 1.1]]
@@ -65,7 +61,7 @@ describe("search algorithms", () => {
       for (let i = 0; i < 30; i++) nodes[`n${i}`] = [22.3 + rnd() * 0.05, 91.8 + rnd() * 0.05];
       const edges = [];
       const ids = Object.keys(nodes);
-      for (let i = 1; i < ids.length; i++) edges.push([ids[i - 1], ids[i]]); // connected chain
+      for (let i = 1; i < ids.length; i++) edges.push([ids[i - 1], ids[i]]);
       for (let k = 0; k < 40; k++) edges.push([ids[Math.floor(rnd() * 30)], ids[Math.floor(rnd() * 30)]]);
       const hav = (a, b) => D.haversineDistance(nodes[a][0], nodes[a][1], nodes[b][0], nodes[b][1]);
       const g = makeGraph(nodes, edges.filter(([a, b]) => a !== b).map(([a, b]) => [a, b, hav(a, b) * (1 + rnd())]));
@@ -86,7 +82,6 @@ describe("search algorithms", () => {
 });
 
 describe("directionality and closures", () => {
-  // A -> B is one-way; the only other way round is the long A-C-B
   const oneWay = () => makeGraph(
     { A: [22.30, 91.80], B: [22.30, 91.81], C: [22.31, 91.805] },
     [["A", "B", 1, { dir: 1 }], ["A", "C", 5], ["C", "B", 5]]
@@ -104,7 +99,7 @@ describe("directionality and closures", () => {
 
   it("closes a road in one direction only", () => {
     const g = oneWay();
-    const env = neutralEnv({ overrides: { e2: { closed: "forward" } } }); // A -> C closed, C -> A open
+    const env = neutralEnv({ overrides: { e2: { closed: "forward" } } });
     assert.equal(S.runUCS("C", "A", g, env).path.join(""), "CA");
     const r = S.runUCS("A", "C", g, env);
     assert.deepEqual(plain(r.path), ["A", "B", "C"]);
@@ -170,8 +165,8 @@ describe("cost model, precedence and weights", () => {
     const scenario = { classConditions: { residential: { traffic: 1.5, rain: 0.5 } }, edgeConditions: { e1: { rain: 1.2 } } };
     const env = neutralEnv({ scenario, overrides: { e1: { traffic: 3.5 } } });
     const c = D.edgeConditions(edge, env);
-    assert.equal(c.traffic, 3.5);  // override beats class
-    assert.equal(c.rain, 1.2);     // scenario road beats class
+    assert.equal(c.traffic, 3.5);
+    assert.equal(c.rain, 1.2);
     assert.equal(D.edgeConditions(edge, neutralEnv({ scenario })).traffic, 1.5);
     assert.equal(D.edgeConditions(edge, neutralEnv()).traffic, null);
   });

@@ -1,13 +1,4 @@
-/* ==========================================================================
-   SPATIAL INDEX
-   Uniform lat/lng grid for fast nearest-point lookup (map clicks, place
-   snapping) and bounding-box queries (roads and places in the viewport).
-   ========================================================================== */
-
 class SpatialIndex {
-  /**
-   * @param cellDeg grid cell size in degrees (0.005 deg is about 550 m)
-   */
   constructor(cellDeg = 0.005) {
     this.cellDeg = cellDeg;
     this.cells = new Map();
@@ -21,7 +12,6 @@ class SpatialIndex {
     return [Math.floor(lat / this.cellDeg), Math.floor(lng / this.cellDeg)];
   }
 
-  // A point item goes in one cell
   insertPoint(item, lat, lng) {
     const [gx, gy] = this.cellOf(lat, lng);
     const k = this.key(gx, gy);
@@ -29,7 +19,6 @@ class SpatialIndex {
     this.cells.get(k).push({ item, lat, lng });
   }
 
-  // An item with an extent (a road) goes in every cell its bounding box touches
   insertBox(item, south, west, north, east) {
     const [gx0, gy0] = this.cellOf(south, west);
     const [gx1, gy1] = this.cellOf(north, east);
@@ -42,10 +31,6 @@ class SpatialIndex {
     }
   }
 
-  /**
-   * Nearest point item to (lat, lng): { item, distanceKm } or null.
-   * Searches outward ring by ring and stops once no closer cell can exist.
-   */
   nearest(lat, lng, maxRings = 60, filter = null) {
     const [gx, gy] = this.cellOf(lat, lng);
     const kmPerCell = this.cellDeg * 110.57 * Math.cos(lat * Math.PI / 180);
@@ -68,9 +53,6 @@ class SpatialIndex {
     return best ? { item: best, distanceKm: bestD } : null;
   }
 
-  /**
-   * All items whose point or box intersects the bounding box (deduplicated)
-   */
   query(south, west, north, east) {
     const [gx0, gy0] = this.cellOf(south, west);
     const [gx1, gy1] = this.cellOf(north, east);

@@ -1,5 +1,3 @@
-/* API tests: run server.js on a random port with a throwaway state file. */
-
 const { describe, it, before, after } = require("node:test");
 const assert = require("node:assert/strict");
 const http = require("http");
@@ -66,7 +64,7 @@ describe("API server", { timeout: 120000 }, () => {
     const ok = await call("POST", "/api/resolve", { lat: 22.3593, lng: 91.8307 });
     assert.equal(ok.status, 200);
     assert.ok(ok.data.distanceM <= 500);
-    assert.equal((await call("POST", "/api/resolve", { lat: 22.0, lng: 91.0 })).status, 404); // far outside the network
+    assert.equal((await call("POST", "/api/resolve", { lat: 22.0, lng: 91.0 })).status, 404);
     assert.equal((await call("POST", "/api/resolve", { lat: 22.36, lng: 91.83, maxDistanceM: 5000 })).status, 422);
     assert.equal((await call("POST", "/api/resolve", "{not json")).status, 422);
   });

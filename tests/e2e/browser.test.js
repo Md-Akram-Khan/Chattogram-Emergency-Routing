@@ -1,7 +1,3 @@
-/* Browser tests: run the real page in headless Edge/Chrome and drive the UI.
-   Skipped automatically when no Chromium-based browser is installed.
-   Map tiles and CDN libraries load from the network. */
-
 const { describe, it, before, after } = require("node:test");
 const assert = require("node:assert/strict");
 const { launch, findBrowser, sleep } = require("../helpers/cdp");
@@ -37,7 +33,7 @@ describe("browser: main workflow", { skip, timeout: 180000 }, () => {
   it("finds a place by name and snaps it to a road node", async () => {
     await browser.evaluate(`document.getElementById("search-target").focus()`);
     await browser.type("chittagong medical college");
-    await sleep(400); // debounce
+    await sleep(400);
     const first = await browser.evaluate(`document.querySelector("#results-target .node-search-item.active .node-search-name").textContent`);
     assert.match(first, /Medical College/i);
     await browser.key("Enter");
@@ -72,7 +68,6 @@ describe("browser: main workflow", { skip, timeout: 180000 }, () => {
     assert.ok(rows >= 6, `expected at least 6 route rows, got ${rows}`);
     const tableRows = await browser.evaluate(`document.querySelectorAll("#table-results-body tr").length`);
     assert.equal(tableRows, rows);
-    // UCS and A* return the same optimal route
     const flags = await browser.evaluate(`[...document.querySelectorAll(".route-same")].map(e => e.textContent).join("|")`);
     assert.match(flags, /same route as/);
     const drawn = await browser.evaluate(`window.CTG_APP.state.routeLayers.size`);
@@ -148,7 +143,6 @@ describe("browser: main workflow", { skip, timeout: 180000 }, () => {
       await sleep(2000);
       assert.equal(await browser.evaluate(`document.querySelectorAll("#compare-body tr").length`), checked);
       assert.ok(await browser.evaluate(`document.getElementById("compare-stale").hidden`));
-      // Change a baseline input: the earlier comparison no longer matches
       await browser.evaluate(`(() => { const s = document.getElementById("slider-traffic"); s.value = String(Number(s.value) === 3 ? 2.5 : 3); s.dispatchEvent(new Event("input")); })()`);
       await sleep(1500);
       assert.equal(await browser.evaluate(`document.getElementById("compare-stale").hidden`), false);
@@ -169,12 +163,11 @@ describe("browser: main workflow", { skip, timeout: 180000 }, () => {
 
   it("lists expanded nodes in order and replays the search step by step", async () => {
     await browser.evaluate(`document.getElementById("btn-run-sim").click()`);
-    await sleep(2000); // overview animation
+    await sleep(2000);
     const total = await browser.evaluate(`window.CTG_APP.state.displayedResult.visitedNodesOrder.length`);
     assert.match(await browser.evaluate(`document.getElementById("trace-summary").textContent`), /nodes expanded, in order/);
     assert.ok(await browser.evaluate(`document.querySelectorAll("#trace-list .trace-row").length`) > 5);
 
-    // Click the 5th row: the map shows exactly the first 5 expansions
     await browser.evaluate(`document.querySelector('#trace-list [data-step="4"]').click()`);
     await sleep(300);
     assert.equal(await browser.evaluate(`window.CTG_APP.trace.current`), 4);
@@ -193,7 +186,6 @@ describe("browser: main workflow", { skip, timeout: 180000 }, () => {
     assert.equal(await browser.evaluate(`window.CTG_APP.trace.current`), 19);
     assert.match(await browser.evaluate(`document.getElementById("trace-detail").textContent`), /reached from .* g = [\d.]+ · h = [\d.]+ · f = [\d.]+/);
 
-    // Play advances on its own; pause stops it
     await browser.evaluate(`document.querySelector('[data-trace="play"]').click()`);
     await sleep(1200);
     await browser.evaluate(`document.querySelector('[data-trace="play"]').click()`);

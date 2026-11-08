@@ -1,11 +1,3 @@
-/* ==========================================================================
-   PERSISTENT STORE
-   Saves road overrides, custom scenarios and UI settings in the browser
-   (localStorage), with a revision counter that increases on every change.
-   Storage can be unavailable (private windows, blocked site data): every
-   access is guarded and the app keeps working with in-memory state.
-   ========================================================================== */
-
 const PersistentStore = {
   PREFIX: "ctg-routing.v1.",
 
@@ -50,7 +42,7 @@ const PersistentStore = {
     const list = this.read("scenarios", []);
     const valid = [];
     list.forEach(s => {
-      try { valid.push(ScenarioSystem.validate(s)); } catch (err) { /* drop corrupt entries */ }
+      try { valid.push(ScenarioSystem.validate(s)); } catch (err) { }
     });
     return valid;
   },

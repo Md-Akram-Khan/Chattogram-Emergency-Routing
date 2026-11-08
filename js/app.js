@@ -1,11 +1,3 @@
-/* ==========================================================================
-   MAIN APPLICATION CONTROLLER (APP.JS) - CHATTOGRAM METRO OSM EDITION
-   Renders the OpenStreetMap street network on a canvas layer (viewport-
-   limited), resolves endpoints from places, roads and map clicks through a
-   spatial index, edits per-road conditions, manages scenarios, and shows
-   every algorithm's route and search frontier.
-   ========================================================================== */
-
 document.addEventListener("DOMContentLoaded", () => {
   const COLORS = {
     clear: "#10b981",
@@ -15,7 +7,6 @@ document.addEventListener("DOMContentLoaded", () => {
     path: "#facc15",
     explored: "#f8fafc"
   };
-  // Congestion index (cost multiplier per km) thresholds for road colouring
   const CONGESTION_MODERATE = 4.0;
   const CONGESTION_SEVERE = 9.0;
   const ROAD_RENDER_LIMIT = 2500;
@@ -59,9 +50,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const escapeHtml = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const $ = id => document.getElementById(id);
 
-  // -------------------------------------------------------------------------
-  // 0. DATASET CHECK (missing-dataset setup panel)
-  // -------------------------------------------------------------------------
   if (!window.CHATTOGRAM_GRAPH || !window.CHATTOGRAM_GRAPH.edges || !window.CHATTOGRAM_GRAPH.edges.length) {
     $("map").hidden = true;
     document.querySelectorAll(".map-overlay-stats, .map-legend-overlay").forEach(el => { el.hidden = true; });
@@ -73,8 +61,6 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   const settings = PersistentStore.read("settings", {});
-  // Version 2: DFS / IDS depth defaults to no limit (0). Settings saved by version 1 always
-  // stored the old default depth of 500, so that value is dropped rather than kept.
   const LIMITS_VERSION = 2;
   function savedLimits(s) {
     const limits = { ...(s.limits || {}) };
@@ -153,7 +139,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Active scenario and weights flow into the cost model through envState
   function applyScenarioToEnv() {
     const scenario = findScenario(state.activeScenarioId);
     state.activeScenarioId = scenario.id;
@@ -161,9 +146,6 @@ document.addEventListener("DOMContentLoaded", () => {
     state.envState.weights = scenario.weights || state.baseWeights;
   }
 
-  // -------------------------------------------------------------------------
-  // 1. SPATIAL INDEXES
-  // -------------------------------------------------------------------------
   const nodeIndex = new SpatialIndex(0.004);
   Object.values(graph.nodes).forEach(n => nodeIndex.insertPoint(n, n.lat, n.lng));
 
@@ -177,9 +159,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const placeIndex = new SpatialIndex(0.004);
   state.places.forEach(p => placeIndex.insertPoint(p, p.lat, p.lng));
 
-  // -------------------------------------------------------------------------
-  // 2. LEAFLET MAP & TILE INITIALIZATION
-  // -------------------------------------------------------------------------
   function initMap() {
     const googleStreets = L.tileLayer("https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}", {
       attribution: '&copy; <a href="https://maps.google.com">Google Maps</a>',
@@ -199,7 +178,6 @@ document.addEventListener("DOMContentLoaded", () => {
       maxZoom: 19
     });
 
-    // Canvas rendering keeps thousands of road polylines smooth to pan and restyle
     state.renderer = L.canvas({ padding: 0.5, tolerance: 6 });
 
     state.map = L.map("map", {
@@ -219,12 +197,9 @@ document.addEventListener("DOMContentLoaded", () => {
       "🌙 Dark Command Center": cartoDark
     }, null, { position: 'topright' }).addTo(state.map);
 
-    // Keep opened popups clear of the stats overlay (top-left) and routes panel (top-right)
     L.Popup.prototype.options.autoPanPaddingTopLeft = L.point(20, 200);
     L.Popup.prototype.options.autoPanPaddingBottomRight = L.point(300, 40);
 
-    // Route and trace highlights draw above the road canvas. Their panes ignore the mouse,
-    // so clicks still reach the roads and explored dots on the canvas below.
     [["routePane", 440], ["traceTopPane", 460]].forEach(([name, z]) => {
       const pane = state.map.createPane(name);
       pane.style.zIndex = z;
@@ -251,9 +226,6 @@ document.addEventListener("DOMContentLoaded", () => {
     state.map.on("popupopen", e => wirePopup(e.popup.getElement()));
   }
 
-  // -------------------------------------------------------------------------
-  // 3. VIEWPORT-LIMITED ROAD, JUNCTION AND PLACE LAYERS
-  // -------------------------------------------------------------------------
   function viewportBounds() {
     const b = state.map.getBounds().pad(0.1);
     return [b.getSouth(), b.getWest(), b.getNorth(), b.getEast()];
@@ -265,7 +237,6 @@ document.addEventListener("DOMContentLoaded", () => {
     refreshPlaceLayer();
   }
 
-  // Roads in view; when more than ROAD_RENDER_LIMIT match, main roads are drawn first
   function refreshRoadLayer() {
     let edges = edgeIndex.query(...viewportBounds()).filter(e => state.roadClasses.has(e.highway));
     const total = edges.length;
@@ -296,7 +267,6 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!state.visibleEdges.has(e.id)) { entry.polyline.addTo(state.map); added++; }
     });
     state.visibleEdges = next;
-    // Newly drawn roads would otherwise cover the explored dots on the same canvas
     if (added && state.tracePlayer) state.tracePlayer.raiseDots();
 
     const notice = $("viewport-notice");
@@ -312,7 +282,6 @@ document.addEventListener("DOMContentLoaded", () => {
     return COLORS.clear;
   }
 
-  // Restyles a road only when conditions changed since it was last styled
   function styleEdge(entry) {
     if (entry.styleVersion === state.styleVersion) return;
     entry.styleVersion = state.styleVersion;
@@ -367,9 +336,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // -------------------------------------------------------------------------
-  // 4. POPUPS: NODES, PLACES, ROAD INSPECTOR & CONDITION EDITOR
-  // -------------------------------------------------------------------------
   function endpointButtons(nodeId, snapM, label) {
     const data = `data-id="${nodeId}" data-snap="${snapM ?? 0}" data-label="${escapeHtml(label || "")}"`;
     return `
@@ -402,7 +368,6 @@ document.addEventListener("DOMContentLoaded", () => {
       </div>`;
   }
 
-  // Clicking empty map space snaps to the nearest road node within the snapping limit
   function openNearestNodePopup(latlng) {
     const hit = nodeIndex.nearest(latlng.lat, latlng.lng);
     const popup = L.popup();
@@ -481,7 +446,6 @@ document.addEventListener("DOMContentLoaded", () => {
       </div>`;
   }
 
-  // Reads the condition editor in a road popup into a conditions object
   function readEditor(container) {
     const get = f => container.querySelector(`[data-field="${f}"]`);
     const raw = {
@@ -554,9 +518,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // -------------------------------------------------------------------------
-  // 5. ENDPOINTS: BEACONS, SNAPPING INFO
-  // -------------------------------------------------------------------------
   function setEndpoint(kind, nodeId, snapM, label) {
     state[kind === "start" ? "startNodeId" : "targetNodeId"] = nodeId;
     state.snap[kind] = nodeId ? { snapM: snapM || 0, label: label || null } : null;
@@ -599,10 +560,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // -------------------------------------------------------------------------
-  // 6. ROUTES: ALL ALGORITHMS IN COMPARE MODE, SELECTION, IDENTICAL ROUTES
-  // -------------------------------------------------------------------------
-  // Stitch edge geometries into one polyline, oriented along the path
   function pathLatLngs(result) {
     const latLngs = [];
     result.pathEdges.forEach((edgeId, i) => {
@@ -627,8 +584,6 @@ document.addEventListener("DOMContentLoaded", () => {
       const selected = res.algoKey === state.selectedRouteKey;
       const color = compare ? ALGO_COLORS[res.algoKey] : COLORS.path;
       const latLngs = pathLatLngs(res);
-      // Selected route: yellow highlighter glow and a dark outline so it stands out from
-      // the amber / red road colours; in compare mode the core keeps the algorithm's colour
       const layers = selected
         ? [
             L.polyline(latLngs, { renderer: state.routeRenderer, color: COLORS.path, weight: 24, opacity: 0.45, lineCap: "round", interactive: false }),
@@ -638,7 +593,6 @@ document.addEventListener("DOMContentLoaded", () => {
         : [L.polyline(latLngs, { renderer: state.routeRenderer, color, weight: 3.5, opacity: 0.85, dashArray: "8, 6", interactive: false })];
       state.routeLayers.set(res.algoKey, layers.map(l => l.addTo(state.map)));
     });
-    // Selected route on top
     (state.routeLayers.get(state.selectedRouteKey) || []).forEach(l => l.bringToFront());
   }
 
@@ -678,14 +632,10 @@ document.addEventListener("DOMContentLoaded", () => {
     animateExplored(res);
   }
 
-  // The exploration trace replays the search; it opens with a quick overview animation
   function animateExplored(result) {
     state.tracePlayer.load(result, { animate: state.showExplored });
   }
 
-  // -------------------------------------------------------------------------
-  // 7. DYNAMIC RE-CALCULATION & SIMULATION ENGINE
-  // -------------------------------------------------------------------------
   function triggerDynamicRecalculation({ fit = false } = {}) {
     clearTimeout(state.recalcTimer);
     applyScenarioToEnv();
@@ -700,7 +650,6 @@ document.addEventListener("DOMContentLoaded", () => {
     if (fit) fitToRoute();
   }
 
-  // Slider drags fire many events; restyle and re-run once they settle
   function scheduleRecalculation() {
     clearTimeout(state.recalcTimer);
     state.recalcTimer = setTimeout(() => triggerDynamicRecalculation(), SLIDER_DEBOUNCE_MS);
@@ -733,7 +682,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const args = [state.startNodeId, state.targetNodeId, state.graph, state.envState, searchOptions()];
     if (state.selectedAlgo === "all") {
       state.currentResults = window.GraphSearchSuite.runAllAlgorithms(...args);
-      // Keep the user's selected route if it still exists, otherwise show the lowest-cost one
       const found = state.currentResults.filter(r => r.found);
       const keep = found.find(r => r.algoKey === state.selectedRouteKey);
       const best = keep || (found.length ? found.reduce((a, b) =>
@@ -752,7 +700,6 @@ document.addEventListener("DOMContentLoaded", () => {
     animateExplored(state.displayedResult);
     populateComparisonTable(state.currentResults);
 
-    // Benchmark charts always compare all algorithms; only compute them when visible
     state.chartsDirty = true;
     if ($("tab-benchmark").classList.contains("active")) renderChartsIfDirty();
   }
@@ -784,7 +731,6 @@ document.addEventListener("DOMContentLoaded", () => {
       $("stat-cost").textContent = result.status === "unreachable" ? "NO PATH" : "STOPPED";
       $("stat-dist").textContent = "--";
       $("stat-time").textContent = "--";
-      // Hide the Google Maps button so it doesn't open a stale route
       gmapsBtn.onclick = null;
       gmapsBtn.style.display = "none";
       return;
@@ -794,7 +740,6 @@ document.addEventListener("DOMContentLoaded", () => {
     $("stat-dist").textContent = result.totalDistance + " km";
     $("stat-time").textContent = result.estimatedTimeMins + " mins";
 
-    // Google Maps accepts a limited number of waypoints: sample evenly along the route
     const inner = result.path.slice(1, -1);
     const stride = Math.max(1, Math.ceil(inner.length / GMAPS_MAX_WAYPOINTS));
     const waypoints = inner.filter((_, i) => i % stride === stride - 1)
@@ -808,14 +753,10 @@ document.addEventListener("DOMContentLoaded", () => {
     gmapsBtn.style.display = "flex";
   }
 
-  // -------------------------------------------------------------------------
-  // 8. COMPARISON TABLE POPULATOR
-  // -------------------------------------------------------------------------
   function populateComparisonTable(results) {
     const tbody = $("table-results-body");
     tbody.innerHTML = "";
 
-    // Only compare algorithms that found a path (failed runs report cost 0)
     const foundResults = results.filter(r => r.found);
     const minCost = Math.min(...foundResults.map(r => r.totalCost));
     const minNodes = Math.min(...foundResults.map(r => r.nodesExpanded));
@@ -828,10 +769,10 @@ document.addEventListener("DOMContentLoaded", () => {
         <td>
           <span class="badge-algo" style="border: 1px solid ${ALGO_COLORS[res.algoKey]};">${res.algoName}</span>
           ${isBestCost ? '<span class="badge-win">Cost Optimal</span>' : ''}
-          ${isBestNodes ? '<span class="badge-win" style="color:#00f2fe; border-color:#00f2fe;">Efficient</span>' : ''}
+          ${isBestNodes ? '<span class="badge-win" style="color:#a3e635; border-color:#a3e635;">Efficient</span>' : ''}
         </td>
         <td><span class="status-pill status-${res.status}">${STATUS_TEXT[res.status]}</span></td>
-        <td style="font-family: var(--font-mono); font-weight: bold; color: var(--accent-cyan);">${res.found ? res.totalCost : "--"}</td>
+        <td style="font-family: var(--font-mono); font-weight: bold; color: var(--accent-primary);">${res.found ? res.totalCost : "--"}</td>
         <td style="font-family: var(--font-mono);">${res.found ? res.totalDistance + " km" : "--"}</td>
         <td style="font-family: var(--font-mono);">${res.found ? res.estimatedTimeMins + " mins" : "--"}</td>
         <td style="font-family: var(--font-mono);">${res.routeNodes}</td>
@@ -844,16 +785,11 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // -------------------------------------------------------------------------
-  // 9. SEARCHABLE ENDPOINT PICKERS (PLACES + EVERY ROAD NODE)
-  // -------------------------------------------------------------------------
   const normalizeText = s => String(s || "").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
-  // Common short forms people type for names in the data
   const SEARCH_ALIASES = { ctg: "chattogram", chittagong: "chattogram", rd: "road", ave: "avenue", hosp: "hospital" };
   const keyHas = (key, word) => key.includes(word) || (SEARCH_ALIASES[word] !== undefined && key.includes(SEARCH_ALIASES[word]));
   let searchIndex = [];
 
-  // Each entry carries a context line so same-named junctions and places can be told apart
   function buildSearchIndex() {
     const landmarks = Object.values(state.graph.nodes).filter(n => n.landmark);
     const nodeEntries = Object.values(state.graph.nodes).map(node => {
@@ -879,7 +815,6 @@ document.addEventListener("DOMContentLoaded", () => {
     searchIndex = placeEntries.concat(nodeEntries).sort((x, y) => x.label.localeCompare(y.label));
   }
 
-  // Every query word must appear in the name, alternative names or context; name matches rank first
   function searchEndpoints(query) {
     const q = normalizeText(query);
     if (!q) return { matches: searchIndex.slice(0, SEARCH_RESULT_LIMIT), total: searchIndex.length };
@@ -889,10 +824,10 @@ document.addEventListener("DOMContentLoaded", () => {
       const nameHas = w => keyHas(entry.nameKey, w) || keyHas(entry.altKey, w);
       const inName = words.every(nameHas);
       if (!inName && !words.every(w => nameHas(w) || keyHas(entry.contextKey, w))) return;
-      let score = 3;                                                            // matched via context
-      if (inName) score = 2;                                                    // substring of a name
-      if (inName && (" " + entry.nameKey).includes(" " + words[0])) score = 1;  // word start
-      if (entry.nameKey.startsWith(q) || entry.altKey.startsWith(q)) score = 0; // name prefix
+      let score = 3;
+      if (inName) score = 2;
+      if (inName && (" " + entry.nameKey).includes(" " + words[0])) score = 1;
+      if (entry.nameKey.startsWith(q) || entry.altKey.startsWith(q)) score = 0;
       scored.push({ entry, score });
     });
     scored.sort((x, y) => x.score - y.score || x.entry.label.localeCompare(y.entry.label));
@@ -906,7 +841,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let matches = [];
     let active = -1;
     let debounce = null;
-    let pending = false; // typed text not yet searched (debounce running)
+    let pending = false;
 
     const close = () => {
       list.hidden = true;
@@ -983,19 +918,17 @@ document.addEventListener("DOMContentLoaded", () => {
         highlight((active + step + matches.length) % matches.length);
       } else if (e.key === "Enter") {
         e.preventDefault();
-        if (pending) render(); // search the latest text before choosing
+        if (pending) render();
         choose(active);
       } else if (e.key === "Escape") {
         input.blur();
       }
     });
-    // mousedown (not click) so the choice lands before the input loses focus
     list.addEventListener("mousedown", e => {
       const li = e.target.closest("[data-index]");
       e.preventDefault();
       if (li) choose(+li.dataset.index);
     });
-    // Leaving the box without choosing restores the current location's name
     input.addEventListener("blur", () => {
       clearTimeout(debounce);
       pending = false;
@@ -1013,9 +946,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // -------------------------------------------------------------------------
-  // 10. SCENARIOS: SELECTOR, STUDIO, COMPARISON
-  // -------------------------------------------------------------------------
   function saveCustomScenario(scenario) {
     const clean = ScenarioSystem.validate({ ...scenario, revision: (scenario.revision || 0) + 1 });
     const i = state.customScenarios.findIndex(s => s.id === clean.id);
@@ -1044,7 +974,6 @@ document.addEventListener("DOMContentLoaded", () => {
     $("weights-badge").textContent = usingScenarioWeights ? "(scenario weights active)" : customWeights ? "(custom)" : "";
   }
 
-  // Studio
   let studioSelectedId = null;
 
   function openStudio() {
@@ -1187,7 +1116,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Scenario comparison
   function compareInputsKey() {
     const e = state.envState;
     return JSON.stringify([state.startNodeId, state.targetNodeId, $("compare-algo").value, e.trafficLevel, e.floodLevel,
@@ -1225,7 +1153,7 @@ document.addEventListener("DOMContentLoaded", () => {
       <tr>
         <td>${escapeHtml(scenario.name)}</td>
         <td><span class="status-pill status-${r.status}">${STATUS_TEXT[r.status]}</span></td>
-        <td style="font-family: var(--font-mono); color: var(--accent-cyan);">${r.found ? r.totalCost : "--"}</td>
+        <td style="font-family: var(--font-mono); color: var(--accent-primary);">${r.found ? r.totalCost : "--"}</td>
         <td style="font-family: var(--font-mono);">${r.found ? r.totalDistance : "--"}</td>
         <td style="font-family: var(--font-mono);">${r.found ? r.estimatedTimeMins : "--"}</td>
         <td style="font-family: var(--font-mono);">${r.routeNodes}</td>
@@ -1235,16 +1163,12 @@ document.addEventListener("DOMContentLoaded", () => {
     markCompareStale();
   }
 
-  // Results computed for earlier inputs are kept but flagged
   function markCompareStale() {
     const stale = !!state.compare && state.compare.key !== compareInputsKey();
     $("compare-stale").hidden = !stale;
     $("compare-body").classList.toggle("stale", stale);
   }
 
-  // -------------------------------------------------------------------------
-  // 11. SETTINGS CONTROLS: WEIGHTS, LIMITS, FILTERS
-  // -------------------------------------------------------------------------
   function renderWeightControls() {
     $("weights-controls").innerHTML = ["traffic", "condition", "rain", "safety"].map(k => `
       <div class="control-group">
@@ -1311,9 +1235,6 @@ document.addEventListener("DOMContentLoaded", () => {
     $("btn-reset-overrides").disabled = n === 0;
   }
 
-  // -------------------------------------------------------------------------
-  // 12. EVENT LISTENERS
-  // -------------------------------------------------------------------------
   function bindEvents() {
     document.querySelectorAll(".nav-btn").forEach(btn => {
       btn.addEventListener("click", () => {
@@ -1505,7 +1426,6 @@ document.addEventListener("DOMContentLoaded", () => {
       `${(meta.nodeCount || Object.keys(state.graph.nodes).length).toLocaleString()} nodes · ${(meta.edgeCount || state.graph.edges.length).toLocaleString()} roads`;
   }
 
-  // Blockade of the first roads on the currently optimal route, forcing a reroute
   function blockadeOnRoute(roadCount) {
     const route = window.GraphSearchSuite.runAStar(state.startNodeId, state.targetNodeId, state.graph, state.envState, searchOptions());
     return route.pathEdges.slice(0, roadCount);
@@ -1550,7 +1470,6 @@ document.addEventListener("DOMContentLoaded", () => {
         state.envState.floodLevel = 1.2;
         state.envState.timeOfDay = "night";
         state.envState.season = "monsoon";
-        // Blockade of the trade lane and market road leaving Khatunganj
         blockadeOnRoute(2).forEach(id => state.envState.blockedEdges.add(id));
         break;
 
@@ -1595,7 +1514,6 @@ document.addEventListener("DOMContentLoaded", () => {
     URL.revokeObjectURL(url);
   }
 
-  // Handle for automated browser tests and debugging (roads are drawn on a canvas)
   window.CTG_APP = {
     state,
     get trace() { return state.tracePlayer; },

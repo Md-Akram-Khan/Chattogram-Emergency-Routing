@@ -1,13 +1,6 @@
-/* ==========================================================================
-   CHART.JS VISUALIZATION ENGINE
-   Renders performance graphs, node expansion metrics, execution times,
-   and multi-criteria algorithm comparison radar charts.
-   ========================================================================== */
-
 const ChartEngine = {
   charts: {},
 
-  // One colour and short label per algorithm, shared with the map's route layers
   ALGO_COLORS: {
     bfs: "#3b82f6",
     dfs: "#8b5cf6",
@@ -19,25 +12,18 @@ const ChartEngine = {
   },
   ALGO_SHORT: { bfs: "BFS", dfs: "DFS", ucs: "UCS", ids: "IDS", astar: "A*", gbfs: "Greedy", astar0: "A* (h=0)" },
 
-  /**
-   * Initializes or updates all 4 benchmark charts with comparison data
-   */
   renderBenchmarkCharts(results) {
     if (!results || results.length === 0) return;
 
     const labels = results.map(r => this.ALGO_SHORT[r.algoKey] || r.algoName);
     const colors = results.map(r => this.ALGO_COLORS[r.algoKey] || "#64748b");
 
-    // Chart 1: Nodes Expanded Bar Chart
     this.renderNodesChart(labels, results.map(r => r.nodesExpanded), colors);
 
-    // Chart 2: Execution Time (ms) Bar Chart
     this.renderTimeChart(labels, results.map(r => r.executionTimeMs), colors);
 
-    // Chart 3: Dynamic Cost vs Physical Distance
     this.renderCostDistanceChart(labels, results.map(r => r.totalCost), results.map(r => r.totalDistance));
 
-    // Chart 4: Radar Multi-Criteria Chart
     this.renderRadarChart(labels, results);
   },
 
@@ -121,15 +107,15 @@ const ChartEngine = {
           {
             label: "Total Dynamic Cost Metric",
             data: costData,
-            backgroundColor: "rgba(0, 242, 254, 0.7)",
-            borderColor: "#00f2fe",
+            backgroundColor: "rgba(34, 197, 94, 0.7)",
+            borderColor: "#22c55e",
             borderWidth: 1
           },
           {
             label: "Physical Distance (km)",
             data: distanceData,
-            backgroundColor: "rgba(16, 185, 129, 0.7)",
-            borderColor: "#10b981",
+            backgroundColor: "rgba(56, 189, 248, 0.7)",
+            borderColor: "#38bdf8",
             borderWidth: 1
           }
         ]
@@ -154,7 +140,6 @@ const ChartEngine = {
 
     if (this.charts.radarChart) this.charts.radarChart.destroy();
 
-    // Select top 3 benchmark contenders: UCS, A*, and Greedy BFS
     const ucs = results.find(r => r.algoKey === "ucs") || results[2];
     const astar = results.find(r => r.algoKey === "astar") || results[4];
     const gbfs = results.find(r => r.algoKey === "gbfs") || results[5];
@@ -163,7 +148,6 @@ const ChartEngine = {
     const maxNodes = Math.max(1, ...results.map(r => r.nodesExpanded));
     const maxTime = Math.max(0.001, ...results.map(r => r.executionTimeMs));
 
-    // Scores out of 100, all derived from measured results
     const calcScore = (res) => {
       if (!res.found) return [0, 0, 0, 0, 0];
       return [

@@ -1,6 +1,3 @@
-/* Tiny static file server for browser tests. `hide` lists paths answered
-   with 404, used to simulate a missing dataset. */
-
 const http = require("http");
 const fs = require("fs");
 const path = require("path");

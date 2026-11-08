@@ -1,34 +1,24 @@
-/* ==========================================================================
-   CHATTOGRAM EMERGENCY ROUTING SIMULATOR - PREMIUM DESIGN SYSTEM
-   Modern Dark Command Center aesthetic with glassmorphism, glowing pulsing
-   start/destination beacons, dynamic map edge badges, and responsive UI.
-   ========================================================================== */
-
 :root {
-  /* Color Palette */
-  --bg-dark: #080c14;
-  --bg-card: #0f172a;
-  --bg-card-hover: #1e293b;
-  --bg-panel: rgba(15, 23, 42, 0.88);
-  --border-color: rgba(255, 255, 255, 0.12);
-  --border-highlight: rgba(0, 242, 254, 0.5);
+  --bg-dark: #05110a;
+  --bg-card: #0a1f14;
+  --bg-card-hover: #123222;
+  --bg-panel: rgba(10, 31, 20, 0.9);
+  --border-color: rgba(187, 247, 208, 0.13);
+  --border-highlight: rgba(34, 197, 94, 0.5);
   
-  /* Text Colors */
-  --text-primary: #f8fafc;
-  --text-secondary: #94a3b8;
-  --text-muted: #64748b;
+  --text-primary: #f0fdf4;
+  --text-secondary: #9db8a7;
+  --text-muted: #6b8b79;
   
-  /* Vibrant Accents */
-  --accent-cyan: #00f2fe;
-  --accent-blue: #3b82f6;
+  --accent-primary: #22c55e;
+  --accent-blue: #15803d;
   --accent-emerald: #10b981;
   --accent-amber: #f59e0b;
   --accent-crimson: #ef4444;
   --accent-purple: #a855f7;
   
-  /* Shadows & Glassmorphism */
   --shadow-lg: 0 20px 40px -10px rgba(0, 0, 0, 0.7);
-  --shadow-glow-cyan: 0 0 20px rgba(0, 242, 254, 0.4);
+  --shadow-glow-primary: 0 0 20px rgba(34, 197, 94, 0.4);
   --shadow-glow-emerald: 0 0 20px rgba(16, 185, 129, 0.5);
   --shadow-glow-crimson: 0 0 20px rgba(239, 68, 68, 0.5);
   --glass-backdrop: blur(16px);
@@ -51,7 +41,6 @@ body {
   min-height: 100vh;
 }
 
-/* Header Navbar */
 .navbar {
   display: flex;
   justify-content: space-between;
@@ -74,12 +63,12 @@ body {
 .brand-logo {
   width: 42px;
   height: 42px;
-  background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+  background: linear-gradient(135deg, var(--accent-primary), var(--accent-blue));
   border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: var(--shadow-glow-cyan);
+  box-shadow: var(--shadow-glow-primary);
 }
 
 .brand-logo svg {
@@ -92,7 +81,7 @@ body {
   font-size: 1.25rem;
   font-weight: 700;
   letter-spacing: -0.02em;
-  background: linear-gradient(90deg, #ffffff, var(--accent-cyan));
+  background: linear-gradient(90deg, #ffffff, var(--accent-primary));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
@@ -124,18 +113,17 @@ body {
 
 .nav-btn:hover, .nav-btn.active {
   color: #ffffff;
-  background: rgba(0, 242, 254, 0.12);
+  background: rgba(34, 197, 94, 0.12);
   border-color: var(--border-highlight);
-  box-shadow: 0 4px 12px rgba(0, 242, 254, 0.15);
+  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.15);
 }
 
-/* Presets Bar */
 .presets-bar {
   display: flex;
   align-items: center;
   gap: 0.75rem;
   padding: 0.55rem 1.8rem;
-  background: rgba(15, 23, 42, 0.95);
+  background: rgba(10, 31, 20, 0.95);
   border-bottom: 1px solid var(--border-color);
   overflow-x: auto;
 }
@@ -163,13 +151,12 @@ body {
 }
 
 .preset-chip:hover {
-  background: rgba(0, 242, 254, 0.18);
+  background: rgba(34, 197, 94, 0.18);
   color: #fff;
-  border-color: var(--accent-cyan);
+  border-color: var(--accent-primary);
   transform: translateY(-1px);
 }
 
-/* Layout Grid - Large Map Focus */
 .main-container {
   display: grid;
   grid-template-columns: 380px 1fr;
@@ -183,14 +170,12 @@ body {
     height: auto;
   }
 
-  /* Stacked layout: the map needs its own height, it no longer fills the grid row */
   .view-area {
     height: 80vh;
     min-height: 480px;
   }
 }
 
-/* Sidebar */
 .sidebar {
   background: var(--bg-card);
   border-right: 1px solid var(--border-color);
@@ -241,14 +226,13 @@ body {
 .value-badge {
   font-size: 0.75rem;
   font-family: var(--font-mono);
-  background: rgba(0, 242, 254, 0.15);
-  color: var(--accent-cyan);
+  background: rgba(34, 197, 94, 0.15);
+  color: var(--accent-primary);
   padding: 0.18rem 0.5rem;
   border-radius: 6px;
   font-weight: 700;
 }
 
-/* Inputs & Sliders */
 .select-input {
   width: 100%;
   background: rgba(0, 0, 0, 0.4);
@@ -262,18 +246,17 @@ body {
 }
 
 .select-input:focus {
-  border-color: var(--accent-cyan);
+  border-color: var(--accent-primary);
 }
 
 .range-input {
   width: 100%;
-  accent-color: var(--accent-cyan);
+  accent-color: var(--accent-primary);
   cursor: pointer;
   height: 6px;
   border-radius: 3px;
 }
 
-/* Segmented Buttons */
 .segmented-control {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -302,10 +285,9 @@ body {
   box-shadow: 0 2px 10px rgba(59, 130, 246, 0.4);
 }
 
-/* Buttons */
 .btn-primary {
   width: 100%;
-  background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+  background: linear-gradient(135deg, var(--accent-primary), var(--accent-blue));
   border: none;
   color: #040812;
   font-weight: 700;
@@ -313,7 +295,7 @@ body {
   border-radius: 12px;
   font-size: 0.92rem;
   cursor: pointer;
-  box-shadow: var(--shadow-glow-cyan);
+  box-shadow: var(--shadow-glow-primary);
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
@@ -323,7 +305,7 @@ body {
 
 .btn-primary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 0 25px rgba(0, 242, 254, 0.6);
+  box-shadow: 0 0 25px rgba(34, 197, 94, 0.6);
 }
 
 .btn-secondary {
@@ -347,7 +329,6 @@ body {
   background: rgba(255, 255, 255, 0.12);
 }
 
-/* View Area & Large Map */
 .view-area {
   position: relative;
   height: 100%;
@@ -377,7 +358,6 @@ body {
   height: 100%;
 }
 
-/* Overlay Dynamic Stats Bar on Map */
 .map-overlay-stats {
   position: absolute;
   top: 1.2rem;
@@ -410,10 +390,9 @@ body {
   font-size: 1.2rem;
   font-weight: 700;
   font-family: var(--font-mono);
-  color: var(--accent-cyan);
+  color: var(--accent-primary);
 }
 
-/* Legend Overlay on Map */
 .map-legend-overlay {
   position: absolute;
   bottom: 1.5rem;
@@ -444,7 +423,6 @@ body {
   border-radius: 50%;
 }
 
-/* PROMINENT START & GOAL MARKERS */
 .beacon-marker {
   position: relative;
   display: flex;
@@ -452,7 +430,6 @@ body {
   justify-content: center;
 }
 
-/* Ripple animation ring */
 .beacon-ripple {
   position: absolute;
   width: 44px;
@@ -482,7 +459,6 @@ body {
   }
 }
 
-/* Pin Core Icon */
 .beacon-core {
   width: 24px;
   height: 24px;
@@ -503,7 +479,6 @@ body {
   background: var(--accent-crimson);
 }
 
-/* Floating Node Text Tag Badge */
 .beacon-tag {
   position: absolute;
   top: -34px;
@@ -529,7 +504,6 @@ body {
   border: 1px solid rgba(239, 68, 68, 0.6);
 }
 
-/* Standard Node Marker */
 .node-marker-standard {
   width: 14px;
   height: 14px;
@@ -539,7 +513,6 @@ body {
   box-shadow: 0 0 8px rgba(59, 130, 246, 0.7);
 }
 
-/* Benchmark Tab & Charts */
 .benchmark-container {
   padding: 1.8rem;
   max-width: 1400px;
@@ -640,7 +613,7 @@ body {
 
 .formula-box {
   background: rgba(0, 0, 0, 0.45);
-  border-left: 4px solid var(--accent-cyan);
+  border-left: 4px solid var(--accent-primary);
   padding: 1rem 1.2rem;
   border-radius: 0 10px 10px 0;
   font-family: var(--font-mono);
@@ -648,7 +621,6 @@ body {
   margin: 1.2rem 0;
 }
 
-/* Visualization Controls */
 .toggle-row {
   display: flex;
   align-items: center;
@@ -660,7 +632,7 @@ body {
 }
 
 .toggle-row input {
-  accent-color: var(--accent-cyan);
+  accent-color: var(--accent-primary);
   width: 16px;
   height: 16px;
 }
@@ -671,7 +643,6 @@ body {
   margin-bottom: 0.8rem;
 }
 
-/* Searchable Location Pickers */
 .node-search {
   position: relative;
 }
@@ -719,7 +690,7 @@ body {
 }
 
 .node-search-item.active {
-  box-shadow: inset 2px 0 0 var(--accent-cyan);
+  box-shadow: inset 2px 0 0 var(--accent-primary);
 }
 
 .node-search-name {
@@ -750,23 +721,17 @@ body {
   border-radius: 50%;
   border: 1px solid var(--border-color);
   background: rgba(0, 0, 0, 0.4);
-  color: var(--accent-cyan);
+  color: var(--accent-primary);
   font-size: 1rem;
   cursor: pointer;
   transition: border-color 0.2s ease, transform 0.2s ease;
 }
 
 .swap-btn:hover {
-  border-color: var(--accent-cyan);
+  border-color: var(--accent-primary);
   transform: rotate(180deg);
 }
 
-/* ==========================================================================
-   FEATURE ADDITIONS: pickers, limits, filters, routes panel, inspector,
-   scenario studio, scenario comparison, setup panel
-   ========================================================================== */
-
-/* Author display rules must not override the hidden attribute */
 [hidden] {
   display: none !important;
 }
@@ -864,7 +829,6 @@ body {
   padding: 0.4rem 0.5rem;
 }
 
-/* Stats overlay status line */
 .map-overlay-stats {
   flex-wrap: wrap;
   row-gap: 0.4rem;
@@ -894,7 +858,6 @@ body {
 .status-pill.status-depth_limit,
 .status-pill.status-timeout { color: var(--accent-amber); }
 
-/* Compare-mode routes panel */
 .routes-panel {
   position: absolute;
   top: 4.6rem;
@@ -984,7 +947,6 @@ body {
   font-size: 0.75rem;
 }
 
-/* Missing-dataset setup panel */
 .setup-panel {
   position: absolute;
   inset: 0;
@@ -1008,7 +970,7 @@ body {
   border-radius: 8px;
   padding: 0.6rem 0.9rem;
   margin: 0.4rem 0 1rem;
-  color: var(--accent-cyan);
+  color: var(--accent-primary);
   font-family: var(--font-mono);
   overflow-x: auto;
 }
@@ -1019,7 +981,6 @@ body {
   padding-right: 1.4rem;
 }
 
-/* Popups: node, place, road inspector and editor */
 .road-popup .leaflet-popup-content {
   max-height: 60vh;
   overflow-y: auto;
@@ -1032,7 +993,7 @@ body {
 }
 
 .popup-title {
-  color: #0891b2;
+  color: #15803d;
   font-size: 0.95rem;
 }
 
@@ -1109,7 +1070,6 @@ body {
   font-size: 0.75rem;
 }
 
-/* Scenario comparison */
 .compare-controls {
   display: grid;
   grid-template-columns: 1fr 260px;
@@ -1142,7 +1102,6 @@ tbody.stale {
   opacity: 0.45;
 }
 
-/* Scenario studio dialog */
 .studio-dialog {
   width: min(1100px, calc(100vw - 32px));
   max-height: calc(100vh - 40px);
@@ -1285,7 +1244,6 @@ tbody.stale {
   }
 }
 
-/* Popups have a light background: use light-theme controls inside them */
 .popup-body .btn-secondary {
   color: #0f172a;
   background: #f1f5f9;
@@ -1302,9 +1260,6 @@ tbody.stale {
   border-color: #cbd5e1;
 }
 
-/* ==========================================================================
-   EXPLORATION TRACE PANEL (beside the map)
-   ========================================================================== */
 .map-layout {
   display: flex;
   height: 100%;
@@ -1368,11 +1323,11 @@ tbody.stale {
 }
 
 .trace-btn:hover {
-  border-color: var(--accent-cyan);
+  border-color: var(--accent-primary);
 }
 
 .trace-play {
-  color: var(--accent-cyan);
+  color: var(--accent-primary);
   min-width: 42px;
 }
 
@@ -1450,7 +1405,7 @@ tbody.stale {
 }
 
 .trace-list:focus-visible {
-  box-shadow: inset 0 0 0 2px var(--accent-cyan);
+  box-shadow: inset 0 0 0 2px var(--accent-primary);
 }
 
 .trace-spacer {
@@ -1530,7 +1485,7 @@ tbody.stale {
 }
 
 .map-chip:hover {
-  border-color: var(--accent-cyan);
+  border-color: var(--accent-primary);
 }
 
 @media (max-width: 1024px) {
@@ -1543,7 +1498,6 @@ tbody.stale {
     height: auto;
   }
 
-  /* A fixed (not flex-derived) height, so the map inside can use height: 100% */
   .map-layout #map-container {
     flex: none;
     height: 75vh;

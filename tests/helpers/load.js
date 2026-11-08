@@ -1,6 +1,3 @@
-/* Loads the browser modules (plain scripts that define globals) into one
-   isolated Node context, the same way index.html loads them. */
-
 const fs = require("fs");
 const path = require("path");
 const vm = require("vm");
@@ -15,7 +12,6 @@ function loadModules({ data = false } = {}) {
   context.window = context;
   vm.createContext(context);
   (data ? DATA.concat(ENGINE) : ENGINE).forEach(rel => {
-    // Top-level const/class bindings are not context properties; expose them as globals
     const src = fs.readFileSync(path.join(ROOT, rel), "utf8")
       .replace(/^const (\w+) =/m, "var $1 =")
       .replace(/^class (\w+)/m, "var $1 = class $1");
@@ -24,10 +20,6 @@ function loadModules({ data = false } = {}) {
   return context;
 }
 
-/**
- * Small graph from a compact spec. Nodes: { id: [lat, lng] }.
- * Edges: [u, v, km, { dir, highway, road_type, ... }] with straight geometry.
- */
 function makeGraph(nodes, edges) {
   const g = { meta: {}, nodes: {}, edges: [] };
   Object.entries(nodes).forEach(([id, [lat, lng]]) => {
@@ -44,7 +36,6 @@ function makeGraph(nodes, edges) {
   return g;
 }
 
-// Neutral environment: every multiplier is 1 except road type, so cost = km * w_road
 function neutralEnv(extra = {}) {
   return {
     trafficLevel: 0, floodLevel: 0, timeOfDay: "day", season: "dry", safetyPriority: 0,

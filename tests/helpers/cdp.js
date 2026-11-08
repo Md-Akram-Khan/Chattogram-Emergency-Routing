@@ -1,7 +1,3 @@
-/* Minimal Chrome DevTools Protocol client for browser tests (no dependencies).
-   Launches a headless Chromium-based browser (Edge or Chrome), opens one page,
-   and exposes evaluate / type / key / screenshot helpers. */
-
 const { spawn } = require("child_process");
 const fs = require("fs");
 const os = require("os");
@@ -75,7 +71,7 @@ async function launch({ width = 1600, height = 1000 } = {}) {
       const t0 = Date.now();
       while (Date.now() - t0 < timeoutMs) {
         await sleep(150);
-        try { if (await browser.evaluate(readyExpr)) return Date.now() - t0; } catch { /* page still loading */ }
+        try { if (await browser.evaluate(readyExpr)) return Date.now() - t0; } catch { }
       }
       throw new Error(`page not ready: ${readyExpr}`);
     },
@@ -100,10 +96,10 @@ async function launch({ width = 1600, height = 1000 } = {}) {
       fs.writeFileSync(file, Buffer.from(res.result.data, "base64"));
     },
     async close() {
-      try { ws.close(); } catch { /* already closed */ }
+      try { ws.close(); } catch { }
       proc.kill();
       await sleep(300);
-      try { fs.rmSync(profile, { recursive: true, force: true }); } catch { /* profile still locked */ }
+      try { fs.rmSync(profile, { recursive: true, force: true }); } catch { }
     }
   };
   return browser;

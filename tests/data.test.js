@@ -1,6 +1,3 @@
-/* Data pipeline tests: builder functions on synthetic input, and integrity of
-   the generated datasets in js/. */
-
 const { describe, it } = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("fs");
@@ -28,7 +25,7 @@ describe("builder: OSM parsing", () => {
       { type: "way", id: 12, nodes: [5, 6], geometry: [g(5), g(6)], tags: { highway: "footway" } }
     ] };
     const { segments } = builder.buildSegments(osm);
-    assert.equal(segments.length, 3); // way 10 split at node 2; footway ignored
+    assert.equal(segments.length, 3);
     const first = segments.find(s => s.u === "n1");
     assert.equal(first.v, "n2");
     assert.equal(first.osmId, 10);
@@ -42,7 +39,6 @@ describe("builder: OSM parsing", () => {
     assert.equal(builder.contractDegreeTwo(same).size, 1);
     const mixed = new Map([["a|b", edge("a", "b", 1)], ["b|c", edge("b", "c", 0)]]);
     assert.equal(builder.contractDegreeTwo(mixed).size, 2);
-    // Reversed storage of the second half: c -> b stored with dir -1 means b -> c only, so it matches
     const reversed = new Map([["a|b", edge("a", "b", 1)], ["b|c", edge("c", "b", -1)]]);
     const out = [...builder.contractDegreeTwo(reversed).values()];
     assert.equal(out.length, 1);
@@ -51,7 +47,6 @@ describe("builder: OSM parsing", () => {
 
   it("keeps the largest strongly connected component", () => {
     const e = (u, v, dir) => ({ u, v, dir });
-    // a <-> b <-> c is strongly connected; d is only reachable one-way
     const scc = builder.largestStronglyConnected([e("a", "b", 0), e("b", "c", 0), e("c", "d", 1)]);
     assert.deepEqual([...scc].sort(), ["a", "b", "c"]);
   });

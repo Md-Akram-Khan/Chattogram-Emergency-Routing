@@ -1,22 +1,3 @@
-/* ==========================================================================
-   GRAPH SEARCH ALGORITHMS SUITE
-   Implementations of BFS, DFS, UCS, IDS, A*, and Greedy Best-First Search
-   (plus a zero-heuristic A* baseline) on a directed view of the road graph,
-   with search limits, result statuses and performance instrumentation.
-
-   Result status:
-     found            a route was found
-     unreachable      the search finished without reaching the goal
-     expansion_limit  stopped after limits.maxExpansions node expansions
-     depth_limit      DFS / IDS ran out of depth (limits.maxDepth; 0 = no limit, the default)
-     timeout          stopped after limits.timeoutMs milliseconds
-   Only "unreachable" means no route exists; the limits do not prove that.
-   ========================================================================== */
-
-/**
- * Binary min-heap priority queue. Ties are broken by insertion order so
- * results are deterministic.
- */
 class PriorityQueue {
   constructor() {
     this.heap = [];
@@ -68,8 +49,6 @@ class PriorityQueue {
 const GraphSearchSuite = {
   _contextCache: null,
 
-  // maxDepth 0 means no depth limit: plain DFS is complete on a finite graph, and
-  // IDS deepens until it finds the goal or has explored everything reachable
   DEFAULT_LIMITS: { maxExpansions: 10000000, timeoutMs: 3000, maxDepth: 0 },
   LIMIT_BOUNDS: { maxExpansions: [1, 50000000], timeoutMs: [10, 60000], maxDepth: [0, 20000] },
 
@@ -94,10 +73,6 @@ const GraphSearchSuite = {
     return out;
   },
 
-  /**
-   * Builds (and caches per environment) the directed adjacency list, an edge
-   * lookup by directed node pair, and the heuristic scale for the conditions.
-   */
   getSearchContext(graph, envState) {
     const key = JSON.stringify([
       envState.trafficLevel, envState.floodLevel, envState.timeOfDay, envState.season, envState.safetyPriority,
@@ -121,8 +96,6 @@ const GraphSearchSuite = {
         if (cost === Infinity) return;
         adj[from].push({ neighbor: to, edge, cost, direction });
         edgeByPair[from + "|" + to] = { edge, cost, direction };
-        // Cheapest cost per straight-line km: H = scale * haversine is then
-        // admissible and consistent, since every arc costs >= scale * its chord
         if (chord > 1e-6) hScale = Math.min(hScale, cost / chord);
       });
     });
@@ -132,10 +105,6 @@ const GraphSearchSuite = {
     return ctx;
   },
 
-  /**
-   * Compact integer (CSR) form of the adjacency list for the hot IDS loop:
-   * neighbours of node i are targets[offsets[i] .. offsets[i + 1] - 1]
-   */
   getIntegerGraph(graph, envState) {
     const ctx = this.getSearchContext(graph, envState);
     if (ctx.intGraph) return ctx.intGraph;
@@ -151,16 +120,10 @@ const GraphSearchSuite = {
     return ctx.intGraph;
   },
 
-  /**
-   * Helper: Builds Adjacency List for the graph under current conditions
-   */
   getAdjacencyList(graph, envState) {
     return this.getSearchContext(graph, envState).adj;
   },
 
-  /**
-   * Helper: Calculates final path metrics (cost, distance, time, safety)
-   */
   calculatePathMetrics(path, graph, envState) {
     const { edgeByPair } = this.getSearchContext(graph, envState);
     let totalCost = 0;
@@ -179,7 +142,6 @@ const GraphSearchSuite = {
       pathEdges.push(entry.edge.id);
     }
 
-    // Distance-weighted average night safety of the route (0..1)
     const pathSafety = totalDistance > 0 ? safetyDistance / totalDistance : 0;
 
     return {
@@ -202,11 +164,9 @@ const GraphSearchSuite = {
   },
 
   newStats() {
-    // expansionInfo[i] describes visitedNodesOrder[i]: parent plus g / h / f or depth
     return { visitedNodesOrder: [], expansionInfo: [], nodesExpanded: 0, nodesGenerated: 1, maxQueueSize: 1 };
   },
 
-  // Returns a stop status when a limit is hit, otherwise null
   checkLimits(stats, limits, startTime) {
     if (stats.nodesExpanded >= limits.maxExpansions) return "expansion_limit";
     if ((stats.nodesExpanded & 1023) === 0 && performance.now() - startTime > limits.timeoutMs) return "timeout";
@@ -238,9 +198,6 @@ const GraphSearchSuite = {
     };
   },
 
-  // =========================================================================
-  // 1. BREADTH-FIRST SEARCH (BFS)
-  // =========================================================================
   runBFS(startId, targetId, graph, envState, options = {}) {
     const startTime = performance.now();
     const limits = this.normalizeLimits(options.limits);
@@ -279,9 +236,6 @@ const GraphSearchSuite = {
     return this.buildResult("bfs", path, status, stats, startTime, graph, envState);
   },
 
-  // =========================================================================
-  // 2. DEPTH-FIRST SEARCH (DFS) - optionally depth limited by limits.maxDepth
-  // =========================================================================
   runDFS(startId, targetId, graph, envState, options = {}) {
     const startTime = performance.now();
     const limits = this.normalizeLimits(options.limits);
@@ -322,19 +276,10 @@ const GraphSearchSuite = {
     return this.buildResult("dfs", path, status, stats, startTime, graph, envState);
   },
 
-  // =========================================================================
-  // 3. UNIFORM COST SEARCH (UCS / Dijkstra)
-  // =========================================================================
   runUCS(startId, targetId, graph, envState, options = {}) {
     return this.bestFirst("ucs", startId, targetId, graph, envState, options, () => 0);
   },
 
-  // =========================================================================
-  // 4. ITERATIVE DEEPENING SEARCH (IDS)
-  // Each iteration is a depth-limited graph search: a node is re-expanded
-  // only when reached with more remaining depth than before, which keeps
-  // iterations linear in graph size instead of exponential in depth.
-  // =========================================================================
   runIDS(startId, targetId, graph, envState, options = {}) {
     const startTime = performance.now();
     const limits = this.normalizeLimits(options.limits);
@@ -380,7 +325,6 @@ const GraphSearchSuite = {
     };
 
     let status = "unreachable";
-    // No limit: a simple path never has more edges than the graph has nodes
     const maxDepth = limits.maxDepth || ids.length;
     for (let depth = 0; depth <= maxDepth; depth++) {
       depthLimit = depth;
@@ -392,16 +336,13 @@ const GraphSearchSuite = {
         break;
       }
       if (stopped) { status = stopped; break; }
-      if (!cutoff) break; // whole reachable graph explored: no path exists
+      if (!cutoff) break;
       if (depth === maxDepth) status = "depth_limit";
     }
 
     return this.buildResult("ids", foundPath || [], status, stats, startTime, graph, envState);
   },
 
-  // =========================================================================
-  // 5. A* SEARCH (A-Star) and the zero-heuristic baseline
-  // =========================================================================
   runAStar(startId, targetId, graph, envState, options = {}) {
     const { hScale } = this.getSearchContext(graph, envState);
     const weight = options.heuristicWeight ?? 1.0;
@@ -409,14 +350,10 @@ const GraphSearchSuite = {
     return this.bestFirst("astar", startId, targetId, graph, envState, options, h);
   },
 
-  // Same engine as A* with H = 0: shows how much work the heuristic saves
   runAStarZero(startId, targetId, graph, envState, options = {}) {
     return this.bestFirst("astar0", startId, targetId, graph, envState, options, () => 0);
   },
 
-  /**
-   * Shared best-first engine for UCS (h = 0) and A* (h = heuristic)
-   */
   bestFirst(algoKey, startId, targetId, graph, envState, options, h) {
     const startTime = performance.now();
     const limits = this.normalizeLimits(options.limits);
@@ -460,9 +397,6 @@ const GraphSearchSuite = {
     return this.buildResult(algoKey, path, status, stats, startTime, graph, envState);
   },
 
-  // =========================================================================
-  // 6. GREEDY BEST-FIRST SEARCH (GBFS)
-  // =========================================================================
   runGreedyBFS(startId, targetId, graph, envState, options = {}) {
     const startTime = performance.now();
     const limits = this.normalizeLimits(options.limits);
@@ -516,10 +450,6 @@ const GraphSearchSuite = {
     }
   },
 
-  /**
-   * Runs all 6 algorithms (plus the zero-heuristic A* baseline when
-   * options.includeZeroHeuristic) on the same graph snapshot
-   */
   runAllAlgorithms(startId, targetId, graph, envState, options = {}) {
     const keys = ["bfs", "dfs", "ucs", "ids", "astar", "gbfs"];
     if (options.includeZeroHeuristic) keys.push("astar0");

@@ -1,14 +1,5 @@
-/* ==========================================================================
-   CHATTOGRAM CITY EXTENDED GRAPH NETWORK DATASET (45 NODES & 85+ PATHS)
-   Comprehensive high-density graph covering all major hospitals, emergency depots,
-   ports, flyovers, bypasses, narrow galis, and coastal corridors across Chattogram.
-   ========================================================================== */
-
-// Positions of the hospitals, fire stations, 2 No Gate, Dewanhat and Saltgola
-// were verified against the same named features in OpenStreetMap.
 const CHATTOGRAM_GRAPH = {
   nodes: {
-    // ------------------- HOSPITALS & MEDICAL HUBS -------------------
     "cmch": {
       id: "cmch",
       name: "CMCH (Chattogram Med. College)",
@@ -82,7 +73,6 @@ const CHATTOGRAM_GRAPH = {
       description: "Foy's Lake USTC Campus Hospital"
     },
 
-    // ------------------- EMERGENCY STATIONS & DEPOTS -------------------
     "epz_circle": {
       id: "epz_circle",
       name: "CEPZ Emergency Fire Depot",
@@ -156,7 +146,6 @@ const CHATTOGRAM_GRAPH = {
       description: "Divisional Headquarters Fire Station Agrabad"
     },
 
-    // ------------------- INTERSECTIONS & FLYOVERS -------------------
     "gec_circle": {
       id: "gec_circle",
       name: "GEC Circle (Nasirabad)",
@@ -392,14 +381,12 @@ const CHATTOGRAM_GRAPH = {
   },
 
   edges: [
-    // ------------------- CMCH & MEDICAL CENTRAL PATHS -------------------
     { id: "e1", u: "cmch", v: "gec_circle", distance_km: 0.8, road_type: "arterial", flood_susceptibility: 0.15, night_safety: 0.95, junction_delay_sec: 25, name: "KB Fazlul Kader Road (CMCH Front)" },
     { id: "e2", u: "cmch", v: "parkview_hosp", distance_km: 0.4, road_type: "avenue", flood_susceptibility: 0.2, night_safety: 0.9, junction_delay_sec: 15, name: "Catalganj Medical Alley" },
     { id: "e3", u: "cmch", v: "metro_hosp", distance_km: 0.5, road_type: "avenue", flood_susceptibility: 0.2, night_safety: 0.9, junction_delay_sec: 20, name: "OR Nizam Road Link" },
     { id: "e4", u: "cmch", v: "chawkbazar", distance_km: 1.4, road_type: "avenue", flood_susceptibility: 0.45, night_safety: 0.8, junction_delay_sec: 45, name: "Medical College Eastern Link Road" },
     { id: "e5", u: "cmch", v: "max_hosp", distance_km: 1.1, road_type: "avenue", flood_susceptibility: 0.3, night_safety: 0.85, junction_delay_sec: 30, name: "Mehdibag Road" },
 
-    // ------------------- GEC, 2 NO. GATE, MURADPUR, EVERCARE -------------------
     { id: "e6", u: "gec_circle", v: "2no_gate", distance_km: 1.2, road_type: "arterial", flood_susceptibility: 0.65, night_safety: 0.9, junction_delay_sec: 50, name: "CDA Avenue (GEC to 2 No. Gate)" },
     { id: "e7", u: "gec_circle", v: "lalkhan_bazar", distance_km: 1.1, road_type: "arterial", flood_susceptibility: 0.1, night_safety: 0.9, junction_delay_sec: 40, name: "CDA Avenue (GEC to Lalkhan Bazar)" },
     { id: "e8", u: "gec_circle", v: "dampara_police", distance_km: 0.7, road_type: "avenue", flood_susceptibility: 0.1, night_safety: 0.9, junction_delay_sec: 25, name: "Dampara Avenue" },
@@ -409,14 +396,12 @@ const CHATTOGRAM_GRAPH = {
     { id: "e12", u: "bahaddarhat", v: "bahaddarhat_depot", distance_km: 0.5, road_type: "avenue", flood_susceptibility: 0.8, night_safety: 0.75, junction_delay_sec: 35, name: "Bahaddarhat Terminal Approach" },
     { id: "e13", u: "bahaddarhat", v: "kalurghat_bridge", distance_km: 3.8, road_type: "arterial", flood_susceptibility: 0.7, night_safety: 0.7, junction_delay_sec: 50, name: "Kalurghat Heavy Industrial Road" },
 
-    // ------------------- BAYEZID & EVERCARE & OXYGEN -------------------
     { id: "e14", u: "gec_circle", v: "bayezid_shrine", distance_km: 2.8, road_type: "avenue", flood_susceptibility: 0.2, night_safety: 0.8, junction_delay_sec: 35, name: "Bayezid Bostami Main Road" },
     { id: "e15", u: "bayezid_shrine", v: "evercare_hosp", distance_km: 0.9, road_type: "avenue", flood_susceptibility: 0.1, night_safety: 0.85, junction_delay_sec: 25, name: "Anannya Avenue to Evercare" },
     { id: "e16", u: "bayezid_shrine", v: "oxygen_circle", distance_km: 1.6, road_type: "arterial", flood_susceptibility: 0.2, night_safety: 0.8, junction_delay_sec: 45, name: "Oxygen-Bayezid Connector" },
     { id: "e17", u: "oxygen_circle", v: "oxygen_depot", distance_km: 0.3, road_type: "avenue", flood_susceptibility: 0.2, night_safety: 0.8, junction_delay_sec: 20, name: "Oxygen Bus Depot Road" },
     { id: "e18", u: "oxygen_circle", v: "bayezid_link", distance_km: 2.1, road_type: "arterial", flood_susceptibility: 0.15, night_safety: 0.8, junction_delay_sec: 30, name: "Bayezid Link Expressway East" },
 
-    // ------------------- CHAWKBAZAR, KHATUNGANJ, ANDARKILLA, KOTWALI -------------------
     { id: "e19", u: "muradpur", v: "chawkbazar", distance_km: 1.8, road_type: "street", flood_susceptibility: 0.75, night_safety: 0.7, junction_delay_sec: 50, name: "College Road to Chawkbazar" },
     { id: "e20", u: "chawkbazar", v: "max_hosp", distance_km: 0.7, road_type: "street", flood_susceptibility: 0.4, night_safety: 0.8, junction_delay_sec: 30, name: "Mehdibag Chawkbazar Link" },
     { id: "e21", u: "chawkbazar", v: "andarkilla", distance_km: 1.5, road_type: "alley", flood_susceptibility: 0.6, night_safety: 0.6, junction_delay_sec: 55, name: "Siraj-ud-Daula Road (Old City Market)" },
@@ -426,7 +411,6 @@ const CHATTOGRAM_GRAPH = {
     { id: "e25", u: "andarkilla", v: "kotwali", distance_km: 0.8, road_type: "street", flood_susceptibility: 0.5, night_safety: 0.7, junction_delay_sec: 40, name: "Andarkilla Shahi Masjid Road" },
     { id: "e26", u: "khatunganj", v: "kotwali", distance_km: 0.7, road_type: "street", flood_susceptibility: 0.9, night_safety: 0.55, junction_delay_sec: 45, name: "Boxirhat Road" },
 
-    // ------------------- RAILWAY STATION, KADAMTALI, HILLY CORRIDORS -------------------
     { id: "e27", u: "kotwali", v: "ctg_railway_station", distance_km: 0.9, road_type: "avenue", flood_susceptibility: 0.4, night_safety: 0.75, junction_delay_sec: 35, name: "Station Road (Kotwali Link)" },
     { id: "e28", u: "ctg_railway_station", v: "kadamtali_depot", distance_km: 0.7, road_type: "street", flood_susceptibility: 0.5, night_safety: 0.7, junction_delay_sec: 30, name: "Kadamtali Spare Parts Lane" },
     { id: "e29", u: "ctg_railway_station", v: "crb_hilly_road", distance_km: 1.0, road_type: "street", flood_susceptibility: 0.1, night_safety: 0.75, junction_delay_sec: 25, name: "CRB Hill Pass Road" },
@@ -434,7 +418,6 @@ const CHATTOGRAM_GRAPH = {
     { id: "e31", u: "lalkhan_bazar", v: "dampara_police", distance_km: 0.4, road_type: "avenue", flood_susceptibility: 0.1, night_safety: 0.9, junction_delay_sec: 20, name: "Dampara Police Station Road" },
     { id: "e32", u: "lalkhan_bazar", v: "tigerpass", distance_km: 1.1, road_type: "arterial", flood_susceptibility: 0.05, night_safety: 0.9, junction_delay_sec: 30, name: "Tigerpass Scenic Hilly Pass" },
 
-    // ------------------- TIGERPASS, DEWANHAT, AGRABAD & PORT -------------------
     { id: "e33", u: "tigerpass", v: "dewanhat", distance_km: 1.0, road_type: "arterial", flood_susceptibility: 0.2, night_safety: 0.85, junction_delay_sec: 45, name: "Dewanhat Overbridge Approach" },
     { id: "e34", u: "kadamtali_depot", v: "dewanhat", distance_km: 0.6, road_type: "avenue", flood_susceptibility: 0.4, night_safety: 0.75, junction_delay_sec: 30, name: "Dewanhat Bus Ramp" },
     { id: "e35", u: "dewanhat", v: "agra_fire_stn", distance_km: 1.0, road_type: "arterial", flood_susceptibility: 0.75, night_safety: 0.85, junction_delay_sec: 40, name: "Fire Service Access Road" },
@@ -443,7 +426,6 @@ const CHATTOGRAM_GRAPH = {
     { id: "e38", u: "agrabad_ca", v: "chattogram_port_g4", distance_km: 1.2, road_type: "arterial", flood_susceptibility: 0.85, night_safety: 0.8, junction_delay_sec: 50, name: "Custom House Road" },
     { id: "e39", u: "chattogram_port_g4", v: "chattogram_port_g1", distance_km: 0.8, road_type: "arterial", flood_susceptibility: 0.9, night_safety: 0.75, junction_delay_sec: 40, name: "Port Strand Road" },
 
-    // ------------------- HALISHAHAR, PORT CONNECTING, PAHARTALI -------------------
     { id: "e40", u: "agrabad_ca", v: "halishahar_block_a", distance_km: 2.1, road_type: "street", flood_susceptibility: 0.9, night_safety: 0.7, junction_delay_sec: 45, name: "Halishahar Access Road" },
     { id: "e41", u: "halishahar_block_a", v: "halishahar_block_l", distance_km: 1.5, road_type: "broken", flood_susceptibility: 0.95, night_safety: 0.6, junction_delay_sec: 35, name: "Halishahar Coastal Embankment" },
     { id: "e42", u: "halishahar_block_a", v: "port_connecting_rd", distance_km: 1.8, road_type: "avenue", flood_susceptibility: 0.7, night_safety: 0.7, junction_delay_sec: 40, name: "Halishahar Trunk Link" },
@@ -453,7 +435,6 @@ const CHATTOGRAM_GRAPH = {
     { id: "e46", u: "pahartali_junction", v: "foys_lake", distance_km: 1.2, road_type: "avenue", flood_susceptibility: 0.2, night_safety: 0.75, junction_delay_sec: 30, name: "Foy's Lake Link Road" },
     { id: "e47", u: "foys_lake", v: "ustc_hospital", distance_km: 0.6, road_type: "street", flood_susceptibility: 0.2, night_safety: 0.8, junction_delay_sec: 20, name: "USTC Campus Gate Road" },
 
-    // ------------------- PORT FREIGHT, SALTGOLA, CEPZ, PATENGA -------------------
     { id: "e48", u: "chattogram_port_g1", v: "saltgola", distance_km: 2.2, road_type: "arterial", flood_susceptibility: 0.85, night_safety: 0.7, junction_delay_sec: 60, name: "Saltgola Lorry Freight Corridor" },
     { id: "e49", u: "saltgola", v: "epz_circle", distance_km: 2.1, road_type: "arterial", flood_susceptibility: 0.8, night_safety: 0.75, junction_delay_sec: 55, name: "EPZ Freight Highway" },
     { id: "e50", u: "epz_circle", v: "patenga_depot", distance_km: 4.2, road_type: "arterial", flood_susceptibility: 0.7, night_safety: 0.8, junction_delay_sec: 40, name: "Patenga Coastal Airport Highway" },
@@ -461,7 +442,6 @@ const CHATTOGRAM_GRAPH = {
     { id: "e52", u: "patenga_depot", v: "karnaphuli_tunnel_north", distance_km: 1.2, road_type: "arterial", flood_susceptibility: 0.4, night_safety: 0.9, junction_delay_sec: 25, name: "Bangabandhu Tunnel Patenga Ramp" },
     { id: "e53", u: "halishahar_block_l", v: "saltgola", distance_km: 2.5, road_type: "broken", flood_susceptibility: 0.9, night_safety: 0.5, junction_delay_sec: 45, name: "Halishahar-Saltgola Coastal Road" },
 
-    // ------------------- NORTHERN HIGHWAYS & BAYEZID BYPASS -------------------
     { id: "e54", u: "foys_lake", v: "bayezid_link", distance_km: 2.8, road_type: "arterial", flood_susceptibility: 0.15, night_safety: 0.8, junction_delay_sec: 35, name: "Bayezid Hilly Link Expressway West" },
     { id: "e55", u: "bayezid_link", v: "faujdarhat_bypass", distance_km: 3.5, road_type: "arterial", flood_susceptibility: 0.1, night_safety: 0.85, junction_delay_sec: 30, name: "Faujdarhat-Bayezid Expressway" },
     { id: "e56", u: "pahartali_junction", v: "faujdarhat_bypass", distance_km: 4.5, road_type: "arterial", flood_susceptibility: 0.2, night_safety: 0.8, junction_delay_sec: 45, name: "Dhaka-Chattogram Highway Trunk" },
@@ -473,5 +453,5 @@ const CHATTOGRAM_GRAPH = {
 
 if (typeof window !== 'undefined') {
   window.CHATTOGRAM_GRAPH = CHATTOGRAM_GRAPH;
-  window.DHAKA_GRAPH = CHATTOGRAM_GRAPH; // Fallback
+  window.DHAKA_GRAPH = CHATTOGRAM_GRAPH;
 }

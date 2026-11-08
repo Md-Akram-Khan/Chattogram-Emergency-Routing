@@ -1,13 +1,3 @@
-/* ==========================================================================
-   SCENARIO SYSTEM
-   Built-in, read-only scenarios plus validation for custom scenarios.
-   A scenario sets simulated conditions per OSM road class and per road
-   (edge id), and can carry its own cost weights. Conditions use the units
-   of DynamicCostSystem: traffic intensity (1-3.5), standing water in metres
-   (0-2.5), road-condition severity (0-1), safety penalty (0-1), and closure
-   ("none" | "forward" | "backward" | "both").
-   ========================================================================== */
-
 const ScenarioSystem = {
   ROAD_CLASSES: ["motorway", "trunk", "primary", "secondary", "tertiary", "unclassified", "residential", "living_street", "service"],
   MAX_COMPARE: 8,
@@ -59,9 +49,6 @@ const ScenarioSystem = {
     ];
   },
 
-  /**
-   * Validates one condition object; returns a cleaned copy or throws
-   */
   cleanConditions(src, where) {
     const out = {};
     ["traffic", "rain", "condition", "safety"].forEach(k => {
@@ -78,9 +65,6 @@ const ScenarioSystem = {
     return out;
   },
 
-  /**
-   * Validates a custom scenario; returns a cleaned copy or throws
-   */
   validate(s) {
     if (!s || typeof s !== "object") throw new Error("scenario must be an object");
     const name = String(s.name || "").trim();

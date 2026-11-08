@@ -1,35 +1,4 @@
 #!/usr/bin/env node
-/* ==========================================================================
-   CHATTOGRAM ROAD GRAPH & PLACE BUILDER
-   Builds js/chattogram_graph.js and js/chattogram_places.js from real
-   OpenStreetMap data:
-     1. Download drivable streets and public service lanes for the study area
-     2. Split ways into segments at intersections (exact OSM node positions),
-        keeping one-way direction, OSM way id and OSM road class
-     3. Keep parallel roads and loops by splitting them at a midpoint vertex
-     4. Optionally prune short dead-end stubs; contract pass-through nodes
-        (only where both halves allow the same travel direction)
-     5. Keep the largest strongly connected component, so every node can
-        reach every other node while respecting one-way streets
-     6. Snap the curated landmarks from tools/seed_graph.js onto real roads
-     7. Interpolate flood / night-safety attributes from the seed edges
-     8. Download named places in a tiled grid (resumable), snap each to the
-        nearest road node, and write a compact self-decoding dataset
-
-   Usage:
-     node tools/build_graph.js                  build from cache (download if missing)
-     node tools/build_graph.js --refresh        re-download roads and places
-     node tools/build_graph.js --offline        never touch the network; build from cache,
-                                                publishing places that are already cached
-     node tools/build_graph.js --diagnose       check Overpass reachability, change nothing
-     node tools/build_graph.js --area city      choose a preset study area (see AREAS)
-     node tools/build_graph.js --bbox S,W,N,E   explicit study area
-     node tools/build_graph.js --place-grid 3   split the place download into 3 x 3 tiles
-     node tools/build_graph.js --no-places      skip the place dataset
-
-   Road and place data (c) OpenStreetMap contributors, ODbL.
-   ========================================================================== */
-
 const fs = require("fs");
 const path = require("path");
 const vm = require("vm");
@@ -42,7 +11,6 @@ const SEED_FILE = path.join(__dirname, "seed_graph.js");
 const GRAPH_FILE = path.join(ROOT, "js", "chattogram_graph.js");
 const PLACES_FILE = path.join(ROOT, "js", "chattogram_places.js");
 
-// Study areas: [south, west, north, east]
 const AREAS = {
   chattogram: { name: "Chattogram Metro (city, Kalurghat, south bank)", bbox: [22.20, 91.72, 22.45, 91.90] },
   city: { name: "Chattogram City Core", bbox: [22.23, 91.73, 22.43, 91.88] }
@@ -50,14 +18,13 @@ const AREAS = {
 const DEFAULT_AREA = "chattogram";
 
 const ROAD_CLASSES = "^(motorway|trunk|primary|secondary|tertiary|unclassified|residential|living_street)(_link)?$";
-// Public service lanes (old-city galis, market and campus lanes); not parking aisles or private driveways
 const SERVICE_EXCLUDE = "parking_aisle|driveway|drive-through|parking";
 const ROAD_FILTER = new RegExp(ROAD_CLASSES);
 const isServiceLane = tags => tags.highway === "service" &&
   !new RegExp(SERVICE_EXCLUDE).test(tags.service || "") && !/^(private|no)$/.test(tags.access || "");
-const STUB_PRUNE_KM = parseFloat(process.env.STUB_KM || "0"); // drop dead-end stubs shorter than this (0 = keep all)
-const SIMPLIFY_TOLERANCE_KM = 0.002;     // max 2 m deviation from the OSM road line
-const LANDMARK_JUNCTION_SNAP_KM = 0.025; // reuse a junction this close instead of splitting the road
+const STUB_PRUNE_KM = parseFloat(process.env.STUB_KM || "0");
+const SIMPLIFY_TOLERANCE_KM = 0.002;
+const LANDMARK_JUNCTION_SNAP_KM = 0.025;
 const PORT_LANDMARKS = ["chattogram_port_g1", "chattogram_port_g4", "saltgola", "epz_circle", "port_connecting_rd"];
 const PORT_RADIUS_KM = 1.5;
 
@@ -70,9 +37,6 @@ const MAX_ATTEMPTS_PER_ENDPOINT = 4;
 const BACKOFF_BASE_MS = 2000;
 const BACKOFF_MAX_MS = 60000;
 
-// ---------------------------------------------------------------------------
-// Command line
-// ---------------------------------------------------------------------------
 function parseArgs(argv) {
   const opts = { refresh: false, offline: false, diagnose: false, places: true, placeGrid: 2, area: DEFAULT_AREA, bbox: null };
   for (let i = 0; i < argv.length; i++) {
@@ -101,9 +65,6 @@ function parseArgs(argv) {
   return opts;
 }
 
-// ---------------------------------------------------------------------------
-// Geometry helpers
-// ---------------------------------------------------------------------------
 function haversine(a, b) {
   const R = 6371;
   const dLat = (b[0] - a[0]) * Math.PI / 180;
@@ -119,11 +80,9 @@ function polylineLength(coords) {
   return len;
 }
 
-// Local equirectangular projection (km) around a reference latitude
 const KM_PER_DEG_LAT = 110.57;
 const kmPerDegLng = lat => 111.32 * Math.cos(lat * Math.PI / 180);
 
-// Douglas-Peucker on a local projection
 function simplify(coords, tol) {
   if (coords.length <= 2) return coords;
   const kx = kmPerDegLng(coords[0][0]);
@@ -149,7 +108,6 @@ function simplify(coords, tol) {
   return coords.filter((_, i) => keep[i]);
 }
 
-// Closest point to pt on segment a-b: { point, t, d (km) }
 function projectOnSegment(pt, a, b) {
   const kx = kmPerDegLng(pt[0]);
   const ax = (a[1] - pt[1]) * kx, ay = (a[0] - pt[0]) * KM_PER_DEG_LAT;
@@ -163,7 +121,6 @@ function projectOnSegment(pt, a, b) {
 const round = (x, dp) => Math.round(x * 10 ** dp) / 10 ** dp;
 const ceil = (x, dp) => Math.ceil(x * 10 ** dp) / 10 ** dp;
 
-// Uniform grid for nearest-point queries over [lat, lng] items
 function makeGridIndex(items, coordOf, cellDeg = 0.005) {
   const grid = new Map();
   const key = (gx, gy) => gx + ":" + gy;
@@ -186,16 +143,12 @@ function makeGridIndex(items, coordOf, cellDeg = 0.005) {
           });
         }
       }
-      // Anything in ring r+1 is at least r cells away
       if (best && bestD < r * cellDeg * KM_PER_DEG_LAT * Math.cos(pt[0] * Math.PI / 180)) break;
     }
     return best ? { item: best, d: bestD } : null;
   };
 }
 
-// ---------------------------------------------------------------------------
-// Overpass access: retries with exponential backoff, Retry-After, incomplete-result checks
-// ---------------------------------------------------------------------------
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 function retryAfterMs(res) {
@@ -224,12 +177,11 @@ async function overpassQuery(query, label) {
         });
         if (!res.ok) {
           lastFailure = `HTTP ${res.status}`;
-          if (!TRANSIENT_HTTP.has(res.status)) break; // rejected query: try the next endpoint, no retry
+          if (!TRANSIENT_HTTP.has(res.status)) break;
           wait = retryAfterMs(res) ?? wait;
         } else {
           const text = await res.text();
           const data = JSON.parse(text);
-          // Overpass reports timeouts / memory exhaustion as a "remark" with partial results
           if (data.remark && /error|timed out|out of memory/i.test(data.remark)) {
             lastFailure = `incomplete result (${data.remark.slice(0, 80)})`;
           } else if (!Array.isArray(data.elements)) {
@@ -274,7 +226,7 @@ async function diagnose() {
       });
       const text = await res.text();
       let verdict = "not OSM JSON";
-      try { if (Array.isArray(JSON.parse(text).elements)) verdict = "valid OSM JSON"; } catch { /* keep verdict */ }
+      try { if (Array.isArray(JSON.parse(text).elements)) verdict = "valid OSM JSON"; } catch { }
       console.log(`  query probe:  HTTP ${res.status} in ${Date.now() - t0} ms, ${verdict}\n`);
     } catch (err) {
       console.log(`  query probe failed after ${Date.now() - t0} ms: ${err.cause?.code || err.name}\n`);
@@ -282,9 +234,6 @@ async function diagnose() {
   }
 }
 
-// ---------------------------------------------------------------------------
-// 1. Load OSM roads (cached per study area) and seed landmarks
-// ---------------------------------------------------------------------------
 const bboxKey = bbox => bbox.map(x => x.toFixed(3)).join("_");
 
 async function loadRoads(opts) {
@@ -306,10 +255,6 @@ function loadSeed() {
   return sandbox.window.CHATTOGRAM_GRAPH;
 }
 
-// ---------------------------------------------------------------------------
-// 2. Split ways into intersection-to-intersection segments
-// ---------------------------------------------------------------------------
-// Travel direction relative to the way's node order: 1 forward only, -1 backward only, 0 both
 function onewayOf(tags) {
   const o = String(tags.oneway || "").toLowerCase();
   if (o === "no" || o === "false" || o === "0") return 0;
@@ -331,7 +276,7 @@ function buildSegments(osm) {
   }));
   const isJunction = n => useCount.get(n) >= 2;
 
-  const nodeCoords = new Map(); // node id -> [lat, lng]
+  const nodeCoords = new Map();
   const segments = [];
   ways.forEach(w => {
     let start = 0;
@@ -360,13 +305,9 @@ function buildSegments(osm) {
   return { segments, nodeCoords };
 }
 
-// ---------------------------------------------------------------------------
-// 3. Simple graph that keeps parallel roads and loops
-// ---------------------------------------------------------------------------
 const pairKey = (u, v) => (u < v ? `${u}|${v}` : `${v}|${u}`);
 const ROAD_RANK = { motorway: 8, trunk: 7, primary: 6, secondary: 5, tertiary: 4, unclassified: 3, residential: 2, living_street: 1, service: 0 };
 
-// Split an edge at its middle vertex into two edges joined by a new node
 function splitAtMiddle(edge, nodeCoords, newId) {
   const mid = Math.floor(edge.coords.length / 2);
   const point = edge.coords[mid];
@@ -379,7 +320,7 @@ function splitAtMiddle(edge, nodeCoords, newId) {
 }
 
 function buildSimpleGraph(segments, nodeCoords) {
-  const edges = new Map(); // pairKey -> edge
+  const edges = new Map();
   let splitCount = 0;
   const add = edge => {
     const key = pairKey(edge.u, edge.v);
@@ -387,18 +328,13 @@ function buildSimpleGraph(segments, nodeCoords) {
       edges.set(key, edge);
       return;
     }
-    // Loop or second road between the same two junctions: keep it as two edges
-    if (edge.coords.length < 3) return; // straight duplicate carries no new road
+    if (edge.coords.length < 3) return;
     splitAtMiddle(edge, nodeCoords, `s${++splitCount}`).forEach(add);
   };
   segments.forEach(s => add({ ...s }));
   return edges;
 }
 
-// ---------------------------------------------------------------------------
-// 4-5. Stub pruning, degree-2 contraction, largest strongly connected component
-// ---------------------------------------------------------------------------
-// Remove dead-end edges shorter than STUB_PRUNE_KM (mapping stubs, driveways)
 function pruneStubs(edges) {
   const degree = new Map();
   edges.forEach(e => {
@@ -432,7 +368,6 @@ function contractDegreeTwo(edges) {
       const b = e2.u === node ? e2.v : e2.u;
       if (a === b || edges.has(pairKey(a, b))) continue;
 
-      // Orient both halves as a -> node -> b; they must allow the same travel direction
       const dir1 = e1.u === a ? e1.dir : -e1.dir;
       const dir2 = e2.u === node ? e2.dir : -e2.dir;
       if (dir1 !== dir2) continue;
@@ -462,7 +397,6 @@ function contractDegreeTwo(edges) {
   return edges;
 }
 
-// Iterative Tarjan: largest set of nodes that can all reach each other along allowed directions
 function largestStronglyConnected(edges) {
   const out = new Map();
   const node = n => { if (!out.has(n)) out.set(n, []); };
@@ -506,11 +440,8 @@ function largestStronglyConnected(edges) {
   return new Set(best);
 }
 
-// ---------------------------------------------------------------------------
-// 6. Snap landmarks onto the road network
-// ---------------------------------------------------------------------------
 function snapLandmarks(seed, roadEdges, nodeCoords) {
-  const landmarkOf = new Map(); // graph node id -> landmark id
+  const landmarkOf = new Map();
   const report = [];
 
   Object.values(seed.nodes).forEach(lm => {
@@ -530,9 +461,8 @@ function snapLandmarks(seed, roadEdges, nodeCoords) {
 
     let nodeId;
     if (Math.min(dU, dV) <= LANDMARK_JUNCTION_SNAP_KM && !landmarkOf.has(nearEnd)) {
-      nodeId = nearEnd; // landmark sits at an existing junction
+      nodeId = nearEnd;
     } else {
-      // Split the road at the projected point; both halves keep the travel direction
       nodeId = `lm_${lm.id}`;
       nodeCoords.set(nodeId, best.point);
       const a = edge.coords.slice(0, best.seg).concat([best.point]);
@@ -548,9 +478,6 @@ function snapLandmarks(seed, roadEdges, nodeCoords) {
   return { landmarkOf, report };
 }
 
-// ---------------------------------------------------------------------------
-// 7. Attribute interpolation from hand-tuned seed edges
-// ---------------------------------------------------------------------------
 function makeSeedSampler(seed) {
   const samples = seed.edges.map(e => {
     const u = seed.nodes[e.u], v = seed.nodes[e.v];
@@ -581,7 +508,7 @@ function roadTypeFor(edge, nearestSeed) {
   switch (edge.highway) {
     case "motorway": case "trunk": case "primary": return "arterial";
     case "secondary": return "avenue";
-    case "residential": case "living_street": case "service": return "alley"; // narrow neighbourhood lanes
+    case "residential": case "living_street": case "service": return "alley";
     default: return "street";
   }
 }
@@ -589,9 +516,6 @@ function roadTypeFor(edge, nearestSeed) {
 const SAFETY_SHIFT = { arterial: 0.05, avenue: 0.02, street: -0.04, alley: -0.08, broken: -0.1 };
 const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
 
-// ---------------------------------------------------------------------------
-// 8. Named places: tiled, resumable download; categories, names, locality, snapping
-// ---------------------------------------------------------------------------
 const PLACE_KEYS = ["amenity", "shop", "healthcare", "tourism", "leisure", "office", "historic", "craft", "railway", "public_transport", "place"];
 
 const PLACE_GROUPS = [
@@ -637,7 +561,7 @@ function placeTiles(bbox, grid) {
 
 async function loadPlaces(opts) {
   const tiles = placeTiles(opts.bbox, opts.placeGrid);
-  const elements = new Map(); // "type/id" -> element (deduplicated across tiles)
+  const elements = new Map();
   const missing = [];
   for (let t = 0; t < tiles.length; t++) {
     const tile = tiles[t];
@@ -652,7 +576,7 @@ async function loadPlaces(opts) {
       try {
         const res = await overpassQuery(`[out:json][timeout:180];(${parts});out center tags;`, `places tile ${t + 1}/${tiles.length}`);
         fs.mkdirSync(CACHE_DIR, { recursive: true });
-        fs.writeFileSync(cacheFile, res.text); // checkpoint: a completed tile is never downloaded again
+        fs.writeFileSync(cacheFile, res.text);
         data = res.data;
       } catch (err) {
         console.warn(`  ${err.message}`);
@@ -682,7 +606,6 @@ function buildPlaces(placeData, graph, order) {
     raw.push({ el, tags, lat, lng, name, bn, alt, ...cat });
   });
 
-  // Locality: address tags first, otherwise the nearest named neighbourhood within 3 km
   const areas = raw.filter(p => p.group === "Area / Neighbourhood");
   const nearestArea = makeGridIndex(areas, a => [a.lat, a.lng], 0.01);
   const places = raw.map(p => {
@@ -702,12 +625,6 @@ function buildPlaces(placeData, graph, order) {
   return places;
 }
 
-// ---------------------------------------------------------------------------
-// 9. Compact output encoding
-// Strings are stored once in a table; junction ids are implied by position
-// (j1, j2, ...); coordinates are integers and edge geometry is delta-encoded.
-// The generated files decode themselves into plain objects.
-// ---------------------------------------------------------------------------
 function decodeGraph(P) {
   const S = P.strings;
   const nodes = {};
@@ -739,7 +656,6 @@ function decodeGraph(P) {
   return { meta: P.meta, nodes, edges, order };
 }
 
-// Junction jK sits at position K-1 so its id is implied; landmarks follow
 function nodeOrder(graph) {
   const all = Object.values(graph.nodes);
   const junctions = all.filter(n => !n.landmark).sort((a, b) => +a.id.slice(1) - +b.id.slice(1));
@@ -811,7 +727,6 @@ function encodePlaces(places, order, meta) {
   };
 }
 
-// Round-trip check: the decoded graph must match what was encoded
 function verifyGraphEncoding(graph, payload) {
   const decoded = decodeGraph(JSON.parse(JSON.stringify(payload)));
   const close = (a, b, eps) => Math.abs(a - b) <= eps;
@@ -831,9 +746,6 @@ function verifyGraphEncoding(graph, payload) {
   });
 }
 
-// ---------------------------------------------------------------------------
-// Output with backups and checksums
-// ---------------------------------------------------------------------------
 function backupOutputs(files) {
   const existing = files.filter(f => fs.existsSync(f));
   if (!existing.length) return null;
@@ -845,22 +757,13 @@ function backupOutputs(files) {
 
 const sha256 = text => crypto.createHash("sha256").update(text).digest("hex");
 
-function writeDataset(file, title, varName, decoder, payload) {
-  const header = `/* ==========================================================================
-   ${title}
-   GENERATED FILE - do not edit by hand. Rebuild with: node tools/build_graph.js
-   Data (c) OpenStreetMap contributors, ODbL.
-   ========================================================================== */
-`;
+function writeDataset(file, varName, decoder, payload) {
   const body = `const ${varName} = (${decoder.toString()})(${JSON.stringify(payload)});\n\n` +
     `if (typeof window !== 'undefined') {\n  window.${varName} = ${varName};\n}\n`;
-  fs.writeFileSync(file, header + body);
+  fs.writeFileSync(file, body);
   return Math.round(fs.statSync(file).size / 1024);
 }
 
-// ---------------------------------------------------------------------------
-// Main
-// ---------------------------------------------------------------------------
 async function main() {
   const opts = parseArgs(process.argv.slice(2));
   if (opts.diagnose) return diagnose();
@@ -886,7 +789,6 @@ async function main() {
   const offsets = report.map(r => r.km * 1000).sort((a, b) => a - b);
   console.log(`Snapped ${report.length} landmarks onto roads (median offset ${offsets[offsets.length >> 1].toFixed(0)} m)`);
 
-  // Final node ids: landmarks keep their seed ids, junctions are numbered south to north
   const graphNodes = [...new Set(roadEdges.flatMap(e => [e.u, e.v]))];
   const junctions = graphNodes.filter(n => !landmarkOf.has(n))
     .sort((a, b) => nodeCoords.get(a)[0] - nodeCoords.get(b)[0] || nodeCoords.get(a)[1] - nodeCoords.get(b)[1]);
@@ -917,7 +819,6 @@ async function main() {
       return;
     }
     let names = [...namesAt.get(n).entries()].sort((x, y) => y[1] - x[1]).map(x => x[0]);
-    // The same road is often tagged in English on one way and Bengali on the next
     if (names.some(isLatin)) names = names.filter(isLatin);
     let name;
     if (names.length >= 2) {
@@ -1032,14 +933,11 @@ async function main() {
   const backup = backupOutputs(placesPayload ? [GRAPH_FILE, PLACES_FILE] : [GRAPH_FILE]);
   if (backup) console.log(`Backed up previous dataset to ${path.relative(ROOT, backup)}`);
 
-  const graphKb = writeDataset(GRAPH_FILE,
-    `CHATTOGRAM ROAD NETWORK (${graph.meta.nodeCount} NODES & ${graph.meta.edgeCount} DIRECTED-AWARE EDGES)`,
-    "CHATTOGRAM_GRAPH", decodeGraph, graphPayload);
+  const graphKb = writeDataset(GRAPH_FILE, "CHATTOGRAM_GRAPH", decodeGraph, graphPayload);
   console.log(`Wrote ${path.relative(ROOT, GRAPH_FILE)}: ${graph.meta.nodeCount} nodes, ${graph.meta.edgeCount} edges, ` +
     `${graph.meta.quality.oneWayEdges} one-way (${graphKb} KB)`);
   if (placesPayload) {
-    const placesKb = writeDataset(PLACES_FILE, `CHATTOGRAM NAMED PLACES (${placesPayload.meta.placeCount})`,
-      "CHATTOGRAM_PLACES", decodePlaces, placesPayload);
+    const placesKb = writeDataset(PLACES_FILE, "CHATTOGRAM_PLACES", decodePlaces, placesPayload);
     console.log(`Wrote ${path.relative(ROOT, PLACES_FILE)}: ${placesPayload.meta.placeCount} places (${placesKb} KB)`);
   }
 }

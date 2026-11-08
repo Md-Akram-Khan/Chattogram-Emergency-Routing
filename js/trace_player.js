@@ -1,23 +1,8 @@
-/* ==========================================================================
-   EXPLORATION TRACE PLAYER
-   Lists every node a search expanded, in order, beside the map, and replays
-   the search step by step: the map shows the nodes expanded up to the
-   current step, the current node, and its path back to the start along the
-   real roads. Click a row or an explored dot to jump to that step.
-   ========================================================================== */
-
 class TracePlayer {
   static ROW_HEIGHT = 30;
-  static COLOR = "#e11d9b"; // magenta: distinct from the green / amber / red road colours
+  static COLOR = "#e11d9b";
   static AUTO_ANIMATION_MS = 1200;
 
-  /**
-   * @param opts.map       Leaflet map
-   * @param opts.renderer     Leaflet canvas renderer shared with the roads (explored dots, clickable)
-   * @param opts.topRenderer  canvas renderer in a pane above the routes (current step and its path)
-   * @param opts.graph     road graph ({ nodes, edges })
-   * @param opts.el        DOM elements: panel, summary, detail, list, spacer, play, speed, jump, follow
-   */
   constructor({ map, renderer, topRenderer, graph, el }) {
     this.map = map;
     this.renderer = renderer;
@@ -25,16 +10,15 @@ class TracePlayer {
     this.graph = graph;
     this.el = el;
     this.layer = L.layerGroup().addTo(map);
-    this.overlay = L.layerGroup().addTo(map); // current node + its path, above the dots
+    this.overlay = L.layerGroup().addTo(map);
     this.result = null;
     this.markers = [];
-    this.shown = -1;     // index of the last expanded node drawn on the map
-    this.current = -1;   // selected step
+    this.shown = -1;
+    this.current = -1;
     this.playing = false;
     this.frame = null;
     this.visible = true;
 
-    // Edge between two nodes in either direction, for drawing paths on real road geometry
     this.edgeByPair = new Map();
     graph.edges.forEach(e => {
       this.edgeByPair.set(e.u + "|" + e.v, e);
@@ -44,9 +28,6 @@ class TracePlayer {
     this.bindEvents();
   }
 
-  // ---------------------------------------------------------------------
-  // Loading a result
-  // ---------------------------------------------------------------------
   load(result, { animate = true } = {}) {
     this.pause();
     this.layer.clearLayers();
@@ -75,7 +56,6 @@ class TracePlayer {
       return;
     }
     if (animate) {
-      // Quick overview of the whole search; the user can then step through it
       this.play(Math.max(60, this.count() / (TracePlayer.AUTO_ANIMATION_MS / 1000)), { auto: true });
     } else {
       this.goTo(this.count() - 1, { pan: false, scroll: false, highlight: false });
@@ -86,10 +66,6 @@ class TracePlayer {
     return this.result ? this.result.visitedNodesOrder.length : 0;
   }
 
-  // ---------------------------------------------------------------------
-  // Moving between steps
-  // ---------------------------------------------------------------------
-  // highlight = false selects the step without drawing its marker and path
   goTo(index, { pan = this.el.follow.checked, scroll = true, highlight = true } = {}) {
     if (!this.result) return;
     const i = Math.max(0, Math.min(this.count() - 1, index));
@@ -102,7 +78,6 @@ class TracePlayer {
     this.renderRows();
   }
 
-  // Adds or removes explored dots so exactly steps 0..i are on the map
   drawUpTo(i) {
     const order = this.result.visitedNodesOrder;
     for (let k = this.shown + 1; k <= i; k++) {
@@ -126,7 +101,6 @@ class TracePlayer {
     this.shown = i;
   }
 
-  // Path from the start to a node through the parents recorded by the search
   pathTo(nodeId) {
     const path = [nodeId];
     const seen = new Set(path);
@@ -144,7 +118,6 @@ class TracePlayer {
     const id = this.result.visitedNodesOrder[this.current];
     const node = this.graph.nodes[id];
 
-    // The goal's path is the found route, already drawn in yellow: show only the marker
     const isGoal = this.result.found && id === this.result.path[this.result.path.length - 1];
     const path = isGoal ? [id] : this.pathTo(id);
     const latLngs = [];
@@ -176,9 +149,6 @@ class TracePlayer {
     return Number(this.el.speed.value);
   }
 
-  // ---------------------------------------------------------------------
-  // Playback
-  // ---------------------------------------------------------------------
   play(stepsPerSecond = this.rate(), { auto = false } = {}) {
     if (!this.result) return;
     this.pause();
@@ -196,7 +166,6 @@ class TracePlayer {
         carry -= steps;
         const target = Math.min(this.count() - 1, this.current + steps);
         if (auto) {
-          // Overview animation: draw dots only, update the panel when it ends
           this.drawUpTo(target);
           this.current = target;
         } else {
@@ -226,13 +195,11 @@ class TracePlayer {
     else this.play();
   }
 
-  // Draws the explored dots above anything added to the shared canvas since
   raiseDots() {
     if (!this.visible) return;
     for (let k = 0; k <= this.shown; k++) this.markers[k].bringToFront();
   }
 
-  // Explored dots on/off (the current step stays visible)
   setVisible(show) {
     this.visible = show;
     if (show) {
@@ -242,9 +209,6 @@ class TracePlayer {
     }
   }
 
-  // ---------------------------------------------------------------------
-  // Panel rendering (virtualised list: only rows in view exist in the DOM)
-  // ---------------------------------------------------------------------
   valueText(info) {
     if (!info) return "";
     if (info.f !== undefined) return `g ${info.g.toFixed(1)} · h ${info.h.toFixed(1)}`;
@@ -284,7 +248,6 @@ class TracePlayer {
     this.el.spacer.innerHTML = html;
   }
 
-  // Keeps the row in view: small moves scroll by one row, jumps centre the row
   scrollToRow(i) {
     const H = TracePlayer.ROW_HEIGHT, list = this.el.list;
     const top = i * H;
@@ -333,9 +296,6 @@ class TracePlayer {
     return String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   }
 
-  // ---------------------------------------------------------------------
-  // Events
-  // ---------------------------------------------------------------------
   bindEvents() {
     const el = this.el;
     el.panel.querySelectorAll("[data-trace]").forEach(btn => {

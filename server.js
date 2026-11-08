@@ -1,17 +1,4 @@
 #!/usr/bin/env node
-/* ==========================================================================
-   CHATTOGRAM ROUTING API SERVER (no dependencies, Node 18+)
-   Serves the web app and a JSON API that runs the same engine files the
-   browser uses (js/dynamic_cost.js, js/scenarios.js, js/algorithms.js).
-   Saved road overrides and custom scenarios persist in .state/state.json.
-
-     node server.js [--port 8000] [--state .state/state.json] [--data js]
-
-   Interactive docs: /docs   OpenAPI schema: /openapi.json
-   Errors: 404 missing resource, 409 built-in scenario edit, 422 invalid
-   input, 503 dataset unavailable.
-   ========================================================================== */
-
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
@@ -32,9 +19,6 @@ class ApiError extends Error {
   constructor(status, message) { super(message); this.status = status; }
 }
 
-// ---------------------------------------------------------------------------
-// Engine and dataset loading (same scripts as index.html)
-// ---------------------------------------------------------------------------
 function loadEngine(dataDir) {
   const context = { performance, console };
   context.window = context;
@@ -53,9 +37,6 @@ function loadEngine(dataDir) {
   return { ctx: context, loadErrors: errors };
 }
 
-// ---------------------------------------------------------------------------
-// Persistent state: overrides, custom scenarios, revision counter
-// ---------------------------------------------------------------------------
 function makeStore(file, ScenarioSystem) {
   let state = { revision: 0, overrides: {}, scenarios: [] };
   try {
@@ -65,7 +46,7 @@ function makeStore(file, ScenarioSystem) {
       overrides: raw.overrides || {},
       scenarios: (raw.scenarios || []).map(s => ScenarioSystem.validate(s))
     };
-  } catch (err) { /* first run or unreadable file: start empty */ }
+  } catch (err) { }
   const save = () => {
     state.revision++;
     fs.mkdirSync(path.dirname(file), { recursive: true });
@@ -74,9 +55,6 @@ function makeStore(file, ScenarioSystem) {
   return { get: () => state, save };
 }
 
-// ---------------------------------------------------------------------------
-// Request helpers and validation
-// ---------------------------------------------------------------------------
 function readJson(req) {
   return new Promise((resolve, reject) => {
     let size = 0;
@@ -114,9 +92,6 @@ function parseBbox(value) {
   return b;
 }
 
-// ---------------------------------------------------------------------------
-// The API
-// ---------------------------------------------------------------------------
 function createApp({ stateFile = path.join(ROOT, ".state", "state.json"), dataDir = path.join(ROOT, "js") } = {}) {
   const { ctx, loadErrors } = loadEngine(dataDir);
   const { DynamicCostSystem: D, ScenarioSystem, GraphSearchSuite: S, SpatialIndex } = ctx;
@@ -157,7 +132,6 @@ function createApp({ stateFile = path.join(ROOT, ".state", "state.json"), dataDi
     return e;
   };
 
-  // Baseline conditions + scenario + saved overrides -> engine environment
   function buildEnv(body = {}, scenarioId = body.scenarioId || "normal") {
     const b = body.env || {};
     const scenario = findScenario(scenarioId);
@@ -200,7 +174,6 @@ function createApp({ stateFile = path.join(ROOT, ".state", "state.json"), dataDi
     return { node: hit.item.id, distanceM };
   }
 
-  // Endpoint from a node id, a place id, or a coordinate
   function endpoint(body, key) {
     const maxM = num(body.maxSnapM, "maxSnapM", 1, SNAP_MAX_M, SNAP_DEFAULT_M);
     const v = body[key];
@@ -252,7 +225,6 @@ function createApp({ stateFile = path.join(ROOT, ".state", "state.json"), dataDi
   }
   const finite = x => (x === Infinity ? null : x);
 
-  // ---- route table ----
   const routes = [];
   const route = (method, pattern, handler) => routes.push({ method, pattern, handler });
 
@@ -437,7 +409,6 @@ function createApp({ stateFile = path.join(ROOT, ".state", "state.json"), dataDi
   route("GET", /^\/openapi\.json$/, () => OPENAPI);
   route("GET", /^\/docs$/, () => ({ html: docsHtml() }));
 
-  // ---- dispatcher ----
   async function handle(req, res) {
     const url = new URL(req.url, "http://localhost");
     const send = (status, payload, type = "application/json") => {
@@ -481,9 +452,6 @@ function serveStatic(pathname, res) {
   fs.createReadStream(file).pipe(res);
 }
 
-// ---------------------------------------------------------------------------
-// OpenAPI description and /docs page
-// ---------------------------------------------------------------------------
 const ref = name => ({ $ref: `#/components/schemas/${name}` });
 const json = schema => ({ content: { "application/json": { schema } } });
 const errors = codes => Object.fromEntries(codes.map(c => [c, { description: { 404: "Not found", 409: "Built-in scenario", 422: "Invalid input", 503: "Dataset unavailable" }[c], ...json(ref("Error")) }]));
@@ -546,18 +514,15 @@ function docsHtml() {
   const rows = Object.entries(OPENAPI.paths).flatMap(([p, ops]) => Object.entries(ops).map(([method, op]) =>
     `<tr><td><code>${method.toUpperCase()}</code></td><td><code>${p}</code></td><td>${op.summary}</td></tr>`)).join("");
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Routing API Docs</title><style>body{font-family:system-ui,sans-serif;margin:2rem;background:#0f172a;color:#e2e8f0}
-table{border-collapse:collapse;width:100%}td,th{border-bottom:1px solid #334155;padding:.5rem;text-align:left;vertical-align:top}
-code{color:#67e8f9}a{color:#67e8f9}pre{background:#1e293b;padding:1rem;border-radius:8px;overflow-x:auto}</style></head><body>
+<title>Routing API Docs</title><style>body{font-family:system-ui,sans-serif;margin:2rem;background:#05110a;color:#f0fdf4}
+table{border-collapse:collapse;width:100%}td,th{border-bottom:1px solid #1f4d33;padding:.5rem;text-align:left;vertical-align:top}
+code{color:#86efac}a{color:#86efac}pre{background:#0a1f14;padding:1rem;border-radius:8px;overflow-x:auto}</style></head><body>
 <h1>${OPENAPI.info.title}</h1><p>${OPENAPI.info.description}</p><p>Machine-readable schema: <a href="/openapi.json">/openapi.json</a></p>
 <table><thead><tr><th>Method</th><th>Endpoint</th><th>Function</th></tr></thead><tbody>${rows}</tbody></table>
 <h2>Example</h2><pre>curl -X POST localhost:8000/api/routes -H "Content-Type: application/json" \\
   -d '{"start":"epz_circle","goal":"cmch","algorithm":"all","scenarioId":"heavy_traffic"}'</pre></body></html>`;
 }
 
-// ---------------------------------------------------------------------------
-// Entry point
-// ---------------------------------------------------------------------------
 if (require.main === module) {
   const args = process.argv.slice(2);
   const arg = (name, fallback) => { const i = args.indexOf(name); return i >= 0 ? args[i + 1] : fallback; };
